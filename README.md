@@ -14,6 +14,7 @@ A fully-featured **6-voice polyphonic analog synthesizer** built with the Teensy
 - **24dB Moog-style ladder filter** with cutoff, resonance, and envelope amount
 - **ADSR envelopes** for both amplitude and filter
 - **Independent LFO system** with rate, depth, toggle, and target selection (Pitch/Filter/Amp)
+- **Macro knob functionality** - Filter envelope knobs can be remapped to control LFO parameters
 - **Extended fine tuning** (±12 semitones with ±25 cent precision)
 - **Glide/Portamento** with adjustable time (50ms - 1000ms)
 
@@ -107,6 +108,7 @@ Main Menu
 ├── Filter → Cutoff, Resonance, Strength
 ├── LFO → Rate, Depth, Toggle, Target
 ├── Voice Mode → Play Mode, Glide Time
+├── Settings → Macro Knobs (Filter Env ↔ LFO Controls)
 └── Exit
 ```
 
@@ -116,6 +118,12 @@ Main Menu
 - **MIDI Input**: Play from DAW or MIDI keyboard with low-latency processing
 - **Preset Loading**: Instant recall of saved sounds
 - **LFO Independence**: Internal LFO works standalone, mod wheel adds additional depth
+
+### **Macro Knob System**
+- **Remappable filter knobs**: Filter Attack/Decay/Release encoders can switch between controlling filter envelope parameters and LFO Rate/Depth/Target
+- **Settings Menu Control**: Navigate to Settings → Macro Knobs and turn encoder to toggle between "Filter Env" and "LFO Controls"
+- **Real-time switching**: Change parameter mapping instantly while performing
+- **Enhanced workflow**: Access frequently-used LFO controls without menu diving
 
 ## Technical Specifications
 
