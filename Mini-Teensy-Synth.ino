@@ -34,10 +34,10 @@ Encoder menuEncoder(MENU_ENCODER_CLK, MENU_ENCODER_DT);
 long encoderValues[20] = {0};
 long lastEncoderValues[20] = {0};
 // Default parameter values - matches "Init" preset
-float allParameterValues[29] = {
+float allParameterValues[30] = {
   0.417, 0.417, 0.417, 0.500, 0.500, 0.417, 0.417, 0.417, 0.789, 0.789,
   0.789, 1.000, 0.000, 0.000, 0.160, 1.000, 0.000, 0.000, 1.000, 0.016,
-  0.500, 1.000, 0.250, 0.000, 0.000, 0.330, 0.330, 0.000, 0.000
+  0.500, 1.000, 0.250, 0.000, 0.000, 0.330, 0.330, 0.000, 0.000, 0.000
 };
 
 // Audio synthesis
@@ -189,9 +189,10 @@ const char* controlNames[] = {
   "Osc1 Wave", "Osc2 Wave", "Osc3 Wave", "Volume 1", "Volume 2", 
   "Volume 3", "Cutoff", "Resonance", "Filt Attack", "Filt Decay",
   "Filt Sustain", "Noise Vol", "Amp Attack", "Amp Sustain", "Amp Decay",
-  "Osc1 Fine", "Filt Strength", "LFO Rate", "LFO Depth", "LFO Toggle", "LFO Target", "Play Mode", "Glide Time", "Noise Type"
+  "Osc1 Fine", "Filt Strength", "LFO Rate", "LFO Depth", "LFO Toggle", "LFO Target", "Play Mode", "Glide Time", "Noise Type", "Macro Mode"
 };
 
+bool macroMode = false;
 
 // Preset system
 struct MiniTeensyPreset {
@@ -284,7 +285,10 @@ enum MenuState {
   // Voice Mode sub-menus
   PLAY_MODE,
   GLIDE_TIME,
-  NOISE_TYPE
+  NOISE_TYPE,
+  // Settings sub-menus
+  SETTINGS,
+  MACRO_KNOBS
 };
 
 MenuState currentMenuState = PARENT_MENU;
@@ -323,6 +327,7 @@ int getParameterIndex(MenuState state) {
     case PLAY_MODE: return 26;
     case GLIDE_TIME: return 27;
     case NOISE_TYPE: return 28;
+    case MACRO_KNOBS: return 29;
     default: return -1;
   }
 }
@@ -651,7 +656,13 @@ void readAllControls() {
       }
       
       int change = encoderValues[i] - lastEncoderValues[i];
-      updateEncoderParameter(i, change);
+      
+      int targetParam = i;
+      if (macroMode && i == 13) targetParam = 22;  // Filter Attack -> LFO Rate  
+      if (macroMode && i == 14) targetParam = 23;  // Filter Decay -> LFO Depth
+      if (macroMode && i == 15) targetParam = 25;  // Filter Release -> LFO Target
+      
+      updateEncoderParameter(targetParam, change);
       lastEncoderValues[i] = encoderValues[i];
     }
   }
@@ -832,6 +843,9 @@ void updateSynthParameter(int paramIndex, float val) {
         noiseMix.gain(1, 1.0); // Pink noise on
       }
       break;
+    case 29: // Macro Mode (menu-only)
+      macroMode = (val > 0.5); // Toggle at 50%
+      break;
   }
 }
 
@@ -870,7 +884,7 @@ void updateEncoderParameter(int paramIndex, int change) {
     case 13: case 14: case 15: case 17: case 18: case 19: // Envelope controls - 128 steps (enc14-enc20 /4)
       increment = 1.0/128.0; // = 0.0078125 - exact 128-step resolution
       break;
-    case 24: case 25: case 26: case 28: // Toggle/discrete controls (LFO Toggle, LFO Target, Play Mode, Noise Type)
+    case 24: case 25: case 26: case 28: case 29: // Toggle/discrete controls (LFO Toggle, LFO Target, Play Mode, Noise Type, Macro Mode)
       increment = 0.5; // Large steps for immediate toggle response
       break;
     default:
@@ -1382,7 +1396,8 @@ void navigateMenuForward() {
       else if (menuIndex == 6) currentMenuState = FILTER;
       else if (menuIndex == 7) currentMenuState = LFO;
       else if (menuIndex == 8) currentMenuState = VOICE_MODE;
-      else if (menuIndex == 9) {
+      else if (menuIndex == 9) currentMenuState = SETTINGS;
+      else if (menuIndex == 10) {
         // Exit menu completely
         inMenu = false;
         inPresetBrowse = false;
@@ -1483,6 +1498,14 @@ void navigateMenuForward() {
         return;
       }
       break;
+    case SETTINGS:
+      if (menuIndex == 0) currentMenuState = MACRO_KNOBS;
+      else if (menuIndex == 1) {
+        currentMenuState = PARENT_MENU;
+        menuIndex = 9;
+        return;
+      }
+      break;
     default:
       // Already in a parameter, can't go deeper
       break;
@@ -1493,7 +1516,7 @@ void incrementMenuIndex() {
   switch(currentMenuState) {
     case PARENT_MENU:
       menuIndex++;
-      if (menuIndex > 9) menuIndex = 0; // Wrap to first item (now 10 items: 0-9)
+      if (menuIndex > 10) menuIndex = 0; // Wrap to first item (now 10 items: 0-9)
       break;
     case OSC_1:
       menuIndex++;
@@ -1527,6 +1550,10 @@ void incrementMenuIndex() {
       menuIndex++;
       if (menuIndex > 2) menuIndex = 0; // Voice Mode has 3 items (0-2) including Back
       break;
+    case SETTINGS:
+      menuIndex++;
+      if (menuIndex > 1) menuIndex = 0; // Settings has 2 items (0-1) including Back
+      break;
     default:
       // In a parameter menu, no navigation
       break;
@@ -1537,7 +1564,7 @@ void decrementMenuIndex() {
   switch(currentMenuState) {
     case PARENT_MENU:
       menuIndex--;
-      if (menuIndex < 0) menuIndex = 9; // Wrap to last item (Exit)
+      if (menuIndex < 0) menuIndex = 10; // Wrap to last item (Exit)
       break;
     case OSC_1:
       menuIndex--;
@@ -1570,6 +1597,10 @@ void decrementMenuIndex() {
     case VOICE_MODE:
       menuIndex--;
       if (menuIndex < 0) menuIndex = 2; // Wrap to Back button (0-2)
+      break;
+    case SETTINGS:
+      menuIndex--;
+      if (menuIndex < 0) menuIndex = 1; // Wrap to Back button (0-1)
       break;
     default:
       // In a parameter menu, no navigation
@@ -1625,6 +1656,7 @@ void backMenuAction() {
     case FILTER:
     case LFO:
     case VOICE_MODE:
+    case SETTINGS:
       currentMenuState = PARENT_MENU;
       break;
     case OSC1_RANGE:
@@ -1672,6 +1704,9 @@ void backMenuAction() {
     case NOISE_TYPE:
       currentMenuState = VOICE_MODE;
       break;
+    case MACRO_KNOBS:
+      currentMenuState = SETTINGS;
+      break;
   }
 }
 
@@ -1710,6 +1745,8 @@ void handleEncoder() {
             allParameterValues[paramIndex] = constrain(allParameterValues[paramIndex] + 0.05, 0.0, 1.0);
           } else if (paramIndex == 28) { // Noise Type - instant toggle with single turn
             allParameterValues[paramIndex] = constrain(allParameterValues[paramIndex] + 0.5, 0.0, 1.0);
+          } else if (paramIndex == 29) { // Macro Mode - instant toggle with single turn
+            allParameterValues[paramIndex] = constrain(allParameterValues[paramIndex] + 0.5, 0.0, 1.0);
           } else {
             // All continuous parameters - consistent 128-step feel across all controls
             allParameterValues[paramIndex] = constrain(allParameterValues[paramIndex] + 1.0/128.0, 0.0, 1.0);
@@ -1723,6 +1760,8 @@ void handleEncoder() {
           } else if (paramIndex == 26) { // Play Mode - large increment for 1-turn switching
             allParameterValues[paramIndex] = constrain(allParameterValues[paramIndex] - 0.05, 0.0, 1.0);
           } else if (paramIndex == 28) { // Noise Type - instant toggle with single turn
+            allParameterValues[paramIndex] = constrain(allParameterValues[paramIndex] - 0.5, 0.0, 1.0);
+          } else if (paramIndex == 29) { // Macro Mode - instant toggle with single turn
             allParameterValues[paramIndex] = constrain(allParameterValues[paramIndex] - 0.5, 0.0, 1.0);
           } else {
             // All continuous parameters - consistent 128-step feel across all controls
@@ -1778,6 +1817,9 @@ void handleEncoder() {
       if (getParameterIndex(currentMenuState) >= 0) {
         // On a parameter - go back to parent submenu (consistent behavior)
         backMenuAction();
+      } else if (currentMenuState == MACRO_KNOBS) {
+        // Toggle macro mode
+        macroMode = !macroMode;
       } else {
         // Navigate deeper into menu
         navigateMenuForward();
@@ -1950,7 +1992,8 @@ void updateDisplay() {
           else if (menuIndex == 6) lcd.print("Filter");
           else if (menuIndex == 7) lcd.print("LFO");
           else if (menuIndex == 8) lcd.print("Voice Mode");
-          else if (menuIndex == 9) lcd.print("< Exit");
+          else if (menuIndex == 9) lcd.print("Settings");
+          else if (menuIndex == 10) lcd.print("< Exit");
           break;
           
           
@@ -2031,6 +2074,23 @@ void updateDisplay() {
           else if (menuIndex == 2) lcd.print("< Back");
           break;
           
+        case SETTINGS:
+          lcd.print("Settings");
+          lcd.setCursor(0, 1);
+          if (menuIndex == 0) lcd.print("Macro Knobs");
+          else if (menuIndex == 1) lcd.print("< Back");
+          break;
+          
+        case MACRO_KNOBS:
+          lcd.print("Filter Knobs:");
+          lcd.setCursor(0, 1);
+          if (macroMode) {
+            lcd.print("LFO Controls");
+          } else {
+            lcd.print("Filter Env");
+          }
+          break;
+          
         default:
           // Parameter editing
           int paramIndex = getParameterIndex(currentMenuState);
@@ -2092,6 +2152,8 @@ void updateDisplay() {
               } else {
                 lcd.print("Pink");
               }
+            } else if (paramIndex == 29) { // Macro Mode
+              lcd.print(macroMode ? "LFO Controls" : "Filter Env");
             } else {
               // Show 0-127 values (MIDI standard)
               int displayValue = (int)(allParameterValues[paramIndex] * 127);
