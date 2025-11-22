@@ -1,6 +1,6 @@
 # MiniTeensy Synth
 
-A fully-featured **6-voice polyphonic virtual analog synthesizer** built with the Teensy 4.1 microcontroller, inspired by the classic **Minimoog**. This project delivers professional-grade synthesis with comprehensive MIDI support, intuitive menu navigation, and multiple play modes.
+A fully-featured **6-voice polyphonic virtual analog synthesizer** built with the Teensy 4.1 microcontroller, inspired by the classic **Minimoog**. This project delivers the best in microcontroller synthesis with comprehensive MIDI support, intuitive menu navigation, and multiple play modes.
 
 ## Features
 
