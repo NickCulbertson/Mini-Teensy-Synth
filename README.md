@@ -18,7 +18,7 @@ A **6-voice polyphonic virtual analog synthesizer** built with the Teensy 4.1 mi
 
 **Full Build:**
 - **Teensy 4.1** microcontroller  
-- **20x Rotary Encoders** + **1x Menu Encoder** with push button
+- **19x Rotary Encoders** + **1x Menu Encoder** with push button
 - **16x2 I2C LCD** display
 - Enclosure, knob caps, hookup wire
 
@@ -53,7 +53,7 @@ Amp Env:     enc18(17,16), enc19(38,37), enc20(40,39)
 **Encoder Wiring:**
 - **CLK/DT pins** to Teensy as shown above
 - **All encoder GND pins** daisy-chained to Teensy GND
-- **All encoder VCC pins** to Teensy 3.3V (if using breakout boards)
+- **Menu encoder VCC pin** to Teensy 3.3V (if ebcoder has a breakout board)
 
 *Macro Mode: enc14/enc15/enc16 become LFO Rate/Depth/Target instead of Filter Attack/Decay/Sustain*
 
@@ -61,12 +61,12 @@ Amp Env:     enc18(17,16), enc19(38,37), enc20(40,39)
 
 **Option 1: Computer DAW (Current Setup)**
 - Single USB cable provides audio output + MIDI input
-- Plug-and-play with any DAW
+- Plug-and-play with some DAWs
 
 **Option 2: Standalone with MIDI Keyboard**  
 For standalone use without computer:
 - Connect USB MIDI keyboard to **Teensy USB Host pins**
-- **Pin 34 (D+)** and **Pin 35 (D-)** - requires USB Host cable
+- Requires USB Host cable
 - Audio output through computer USB (or modify code for I2S/line out)
 - **Note:** Requires code modification for USB Host MIDI instead of USB Device
 
