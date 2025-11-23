@@ -22,7 +22,7 @@ A **6-voice polyphonic virtual analog synthesizer** built with the Teensy 4.1 mi
 - **16x2 I2C LCD** display
 - Enclosure, knob caps, hookup wire
 
-**Minimal Build (just $25-30):**
+**Minimal Build:**
 - **Teensy 4.1** + **1x Menu Encoder** + **LCD**
 - USB cable for audio/MIDI output
 - All parameters accessible via menu system
