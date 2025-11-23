@@ -6,9 +6,9 @@ A fully-featured **6-voice polyphonic virtual analog synthesizer** built with th
 
 ### 🎹 **Polyphonic Synthesis**
 - **6-voice polyphony** with voice allocation
-- **3 oscillators** per voice with frequency ranges (32', 16', 8', 4', 2', LO)
+- **3 oscillators** per voice (18 oscillators total) with frequency ranges (32', 16', 8', 4', 2', LO)
 - **6 waveforms** per oscillator (Triangle, Reverse Saw, Sawtooth, Square, Pulse variations)
-- **White & Pink noise generator**
+- **Shared White & Pink noise generators** (mixed into all voices)
 
 ### 🎛️ **Sound Design**
 - **24dB Moog-style ladder filter** with cutoff, resonance, and envelope amount
@@ -26,7 +26,7 @@ A fully-featured **6-voice polyphonic virtual analog synthesizer** built with th
 ### 🎚️ **Hardware Control**
 - **20 rotary encoders** for real-time parameter control
 - **I2C LCD display** (16x2) for visual feedback
-- **Menu encoder** with button for deep parameter access
+- **Menu encoder** with button for parameter access
 - **Hierarchical menu system** with intuitive navigation
 
 ### 🎼 **MIDI Integration**
@@ -34,7 +34,6 @@ A fully-featured **6-voice polyphonic virtual analog synthesizer** built with th
 - **Polyphonic note on/off** with velocity sensitivity
 - **Pitch wheel** support (±2 semitone range)
 - **Mod wheel** adds to LFO depth for enhanced performance control
-- **All Notes Off** panic function
 - **Expandable to hardware MIDI** with code modifications
 
 ### 🎨 **Preset System**
@@ -46,26 +45,24 @@ A fully-featured **6-voice polyphonic virtual analog synthesizer** built with th
 
 ### **Core Components**
 - **Teensy 4.1** microcontroller
-- **Teensy Audio Shield** (Rev D recommended)
 - **20x Rotary Encoders** (with detents) - *Optional: See minimal build below*
 - **1x Menu Encoder** with push button
 - **16x2 I2C LCD** display (HD44780 compatible)
 
 ### **Minimal Build Option**
 For testing or budget builds, you can start with just:
-- **Teensy 4.1** + **Audio Shield**
+- **Teensy 4.1** (standalone - no audio shield needed)
 - **1x Menu Encoder** with push button (pins 14, 13, 15)
 - **16x2 I2C LCD** (pins 18, 19)
 
+**Audio output:** Uses Teensy's built-in **USB Audio** - no additional hardware required!
 All synthesis parameters are accessible through the menu system. Add hardware encoders later for direct real-time control.
 
 ### **Additional Components**
 - **Enclosure** - Recommend aluminum or wood case
 - **Knob caps** - 21 total (20 parameter + 1 menu)
-- **Power supply** - 5V DC, 1A minimum
-- **Audio jack** - 1/8" (3.5mm) stereo
-- **USB cable** - Type-C for MIDI and programming
-- **Hookup wire** - 22-24 AWG solid core recommended
+- **MicroUSB cable** - for connecting and programming
+- **Hookup wire** - I used jumper wires
 - **Breadboard or perfboard** - For connections
 
 ## Hardware Assembly
@@ -114,15 +111,17 @@ All synthesis parameters are accessible through the menu system. Add hardware en
 
 **LCD I2C Address:** 0x27 (default)
 
-#### **Audio Output**
-- **Audio Shield** provides line-level output
-- Connect 1/8" stereo jack to shield's audio output
-- **Headphone output** available on shield
+#### **Audio Output (USB Audio)**
+- **No additional hardware needed** - audio comes through USB
+- Connect Teensy to computer via **MicroUSB**  
+- Teensy appears as **USB Audio device** in your OS
+- **High-quality digital audio** directly to computer
+- **Perfect for:** DAW recording, software monitoring, headphone amps
 
 #### **MIDI Connectivity Options**
 
 **Option 1: USB Device MIDI (Current Setup - Recommended)**
-- Connect Teensy to computer via **USB Type-C**
+- Same **MicroUSB** connection provides both audio and MIDI
 - Teensy appears as **USB MIDI device** in DAW
 - **Plug-and-play** - no additional hardware needed
 - Supports bidirectional MIDI communication
@@ -137,24 +136,6 @@ If you need standalone operation or hardware MIDI keyboards:
 
 **Current firmware is configured for USB Device MIDI.** For hardware MIDI, you'll need to modify the code to use Serial MIDI instead of USB MIDI.
 
-#### **Power Connections**
-- **VIN:** 5V DC input (1A minimum)
-- **GND:** Connect all grounds together
-- **3.3V:** Powers LCD and logic (provided by Teensy)
-
-### **Wiring Notes**
-- Use **solid core wire** for reliable connections
-- Keep encoder wires **short** to minimize noise
-- Route **power and audio separately** from digital signals  
-- Add **0.1µF bypass capacitors** near each encoder for stability
-- Use **shielded cable** for audio output to reduce noise
-
-### **Enclosure Considerations**
-- **Front panel:** Mount encoders and LCD for easy access
-- **Ventilation:** Provide adequate airflow
-- **Shielding:** Metal enclosure helps reduce EMI
-- **Size:** Allow space for wiring and future expansion
-
 ## Software Installation
 
 ### **Step 1: Install Arduino IDE**
@@ -162,9 +143,19 @@ If you need standalone operation or hardware MIDI keyboards:
 2. **Install** following platform-specific instructions
 3. **Launch Arduino IDE** to verify installation
 
-### **Step 2: Install Teensyduino**
+### **Step 2: Install Teensy Support**
+
+**Option A: Modern Arduino IDE (2.1.0+)**
+Recent versions may have built-in Teensy support:
+1. **Tools → Board Manager** 
+2. Search for **"Teensy"** by Paul Stoffregen
+3. **Install** if available
+4. **Verify** Teensy 4.1 appears in board selection
+
+**Option B: Teensyduino (If needed)**
+If Teensy boards don't appear in Arduino IDE:
 1. **Download Teensyduino** from [PJRC website](https://www.pjrc.com/teensy/td_download.html)
-2. **Run installer** - it will detect Arduino IDE automatically
+2. **Run installer** - it will detect Arduino IDE automatically  
 3. **Select components** - ensure "Teensy Audio Library" is checked
 4. **Complete installation** and restart Arduino IDE
 
@@ -176,12 +167,14 @@ Open Arduino IDE → **Tools → Manage Libraries** and install:
 | `LiquidCrystal I2C` | Frank de Brabander | Latest | LCD display control |
 | `Encoder` | Paul Stoffregen | Latest | Rotary encoder reading |
 
-**Note:** These libraries come pre-installed with Teensyduino:
+**Note:** These libraries come with Teensy support (Teensyduino or Board Manager):
 - `Audio.h` - Teensy Audio Library (synthesis engine)
 - `Wire.h` - I2C communication 
-- `SPI.h` - SPI communication
+- `SPI.h` - SPI communication  
 - `SD.h` - SD card support
 - `SerialFlash.h` - Flash memory support
+
+**Important:** If using Board Manager instead of Teensyduino, you may need to manually install the Audio library from [GitHub](https://github.com/PaulStoffregen/Audio).
 
 ### **Step 4: Download Project**
 ```bash
@@ -196,8 +189,8 @@ git clone https://github.com/your-username/Mini-Teensy-Synth.git
 2. **Select Board:**
    - Tools → Board → Teensyduino → **Teensy 4.1**
 3. **Select USB Type:**
-   - Tools → USB Type → **MIDI** 
-   - This enables USB MIDI functionality
+   - Tools → USB Type → **Audio + MIDI** 
+   - This enables both USB audio output and MIDI functionality
 4. **Select Port:**
    - Tools → Port → Select your Teensy port
 
@@ -222,8 +215,8 @@ git clone https://github.com/your-username/Mini-Teensy-Synth.git
 ### **First Boot**
 After successful upload:
 1. **LCD displays:** "MiniTeensy Synth" and "6-Voice Poly"
-2. **Connect MIDI** keyboard or DAW for testing
-3. **Audio output** available on Audio Shield jack
+2. **Audio device appears** in your OS as "Teensy Audio"
+3. **Connect MIDI** keyboard or DAW for testing
 4. **Turn encoders** to verify hardware functionality
 
 ## Usage
@@ -264,16 +257,6 @@ Main Menu
 - **Real-time switching**: Change parameter mapping instantly while performing
 - **Enhanced workflow**: Access frequently-used LFO controls without menu diving
 
-## Technical Specifications
-
-- **Polyphony**: 6 voices
-- **Sample Rate**: 44.1 kHz
-- **Bit Depth**: 16-bit
-- **Latency**: <3ms
-- **CPU Usage**: ~40% (Teensy 4.1 @ 600MHz)
-- **Memory**: ~30% PSRAM usage
-- **MIDI Channels**: 1-16 (configurable)
-
 ## Project Structure
 
 ```
@@ -300,7 +283,3 @@ This project is open source. See `LICENSE` file for details.
 - **PJRC** for the incredible Teensy platform and Audio Library
 - **Minimoog** for the original analog synthesizer inspiration
 - **Open source community** for libraries and examples
-
----
-
-🎵 **Built with passion for analog synthesis and open hardware** 🎵
