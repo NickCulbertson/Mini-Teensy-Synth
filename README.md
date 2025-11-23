@@ -39,7 +39,7 @@ Power:       USB cable to computer
 **That's it!** All synthesis parameters accessible through menu.
 
 ### **Full Build (20 Encoders)**
-**Parameter Encoder Pins:**
+**Parameter Encoder Pins (configurable in code):**
 ```
 Osc Ranges:  enc1(4,5), enc2(2,3), enc3(0,1)
 Osc Fine:    enc4(8,9), enc5(6,7)
@@ -92,14 +92,10 @@ For standalone use without computer:
 Presets | OSC 1-3 | Noise | Envelopes | Filter | LFO | Voice Mode | Settings
 ```
 
-## Technical Specs
-- **6 voices**, 44.1kHz, 16-bit, <3ms latency
-- **~40% CPU** usage on Teensy 4.1 @ 600MHz
-
 ## Contributing
 Fork, test on hardware, submit PR. Open source project!
 
 ## Thanks
 - **PJRC** - Teensy platform and Audio Library
-- **Minimoog** - Original analog inspiration
+- **Minimoog** - The OG
 - **Open source community**
