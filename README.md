@@ -28,20 +28,11 @@ A **6-voice polyphonic virtual analog synthesizer** built with the Teensy 4.1 mi
 - All parameters accessible via menu system
 
 **Parts:**
-Teensy 4.1
-https://www.sparkfun.com/teensy-4-1-without-ethernet.html
-
-Menu Encoder
-https://www.amazon.com/Taiss-KY-040-Encoder-15×16-5-Arduino/dp/B07F26CT6B/ref=sr_1_3_pp
-
-Other Encoders
-https://www.aliexpress.us/item/3256801237549169.html
-
-LCD 2X16
-https://www.amazon.com/Hosyond-Display-Module-Arduino-Raspberry/dp/B0BWTFN9WF/ref=sr_1_2
-
-Knobs
-https://www.amazon.com/Taiss-Silver-Rotary-Potentiometer-Diameter/dp/B07F25NMJ7/ref=sr_1_5
+- Teensy 4.1 (https://www.sparkfun.com/teensy-4-1-without-ethernet.html)
+- Menu Encoder (https://www.amazon.com/Taiss-KY-040-Encoder-15×16-5-Arduino/dp/B07F26CT6B/ref=sr_1_3_pp)
+- Other Encoders (https://www.aliexpress.us/item/3256801237549169.html)
+- LCD 2X16 (https://www.amazon.com/Hosyond-Display-Module-Arduino-Raspberry/dp/B0BWTFN9WF/ref=sr_1_2)
+- Knobs (https://www.amazon.com/Taiss-Silver-Rotary-Potentiometer-Diameter/dp/B07F25NMJ7/ref=sr_1_5)
 
 ## Wiring
 
