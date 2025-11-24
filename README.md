@@ -2,6 +2,10 @@
 
 A **6-voice polyphonic virtual analog synthesizer** built with the Teensy 4.1 microcontroller, inspired by the classic **Minimoog**. Features comprehensive synthesis with USB audio/MIDI and intuitive menu control.
 
+*“DIY Minimoog Inspired Synth | A Teensy Powered Tribute”*
+
+[![Watch the video](https://img.youtube.com/vi/ETfcjzIK8Po/hqdefault.jpg)](https://youtu.be/ETfcjzIK8Po)
+
 ## Key Features
 - **6-voice polyphony** with 3 oscillators per voice (18 total)
 - **6 waveforms** per oscillator
@@ -26,6 +30,13 @@ A **6-voice polyphonic virtual analog synthesizer** built with the Teensy 4.1 mi
 - **Teensy 4.1** + **1x Menu Encoder** + **LCD**
 - USB cable for audio/MIDI output
 - All parameters accessible via menu system
+
+**Parts:**
+- Teensy 4.1 (https://www.sparkfun.com/teensy-4-1-without-ethernet.html)
+- Menu Encoder (https://www.amazon.com/Taiss-KY-040-Encoder-15×16-5-Arduino/dp/B07F26CT6B/ref=sr_1_3_pp)
+- Other Encoders (https://www.aliexpress.us/item/3256801237549169.html)
+- LCD 2X16 (https://www.amazon.com/Hosyond-Display-Module-Arduino-Raspberry/dp/B0BWTFN9WF/ref=sr_1_2)
+- Knobs (https://www.amazon.com/Taiss-Silver-Rotary-Potentiometer-Diameter/dp/B07F25NMJ7/ref=sr_1_5)
 
 ## Wiring
 
