@@ -14,6 +14,7 @@ A **6-voice polyphonic virtual analog synthesizer** built with the Teensy 4.1 mi
 - **Independent LFO** with pitch/filter/amp targets
 - **Macro knob system** - remap filter knobs to LFO controls
 - **USB Audio + MIDI** - single cable to computer
+- **MIDI channel selection** - receive on specific channel or omni mode
 - **20 hardware encoders** + LCD for real-time control
 - **20 Presets** - 80s Brass, Saw Keys, Bass sounds, Pads, and more
 - **Multiple play modes** - Mono, Poly, Legato with glide
@@ -81,6 +82,33 @@ For standalone use without computer:
 - Audio output through computer USB (or modify code for I2S/line out)
 - **Note:** Requires code modification for USB Host MIDI instead of USB Device
 
+**Option 3: DIN MIDI Support (Hardware Modification)**
+Add traditional 5-pin DIN MIDI input for hardware compatibility:
+
+**Hardware Required:**
+- 6N138 optocoupler IC  
+- 220Ω resistor
+- 5-pin DIN MIDI connector
+- Standard MIDI interface circuit (see MIDI spec)
+
+**Wiring:**
+- Connect MIDI interface circuit output to **Teensy Serial1 (Pin 0)**
+- MIDI input circuit connects to DIN connector pins 4,5
+- **Important:** Pin 0 is currently used by enc3 (Osc3 Range). You'll need to move enc3's CLK wire from Pin 0 to one of the surface mount pins on the bottom of the Teensy 4.1 board (pins 42-47 are available)
+
+**Code Changes Required:**
+```cpp
+// In Mini-Teensy-Synth.ino, uncomment this line:
+#define ENABLE_DIN_MIDI
+
+// That's it! The DIN MIDI support code is already included.
+```
+
+**Features:**
+- Supports both USB MIDI and DIN MIDI simultaneously
+- Selectable MIDI channel (1-16 or Omni) via Settings menu
+- Standard MIDI implementation (Note On/Off, CC, Pitch Bend)
+
 ## Software Installation
 
 1. **Install Arduino IDE** 2.0+ from [arduino.cc](https://www.arduino.cc/en/software)
@@ -88,6 +116,7 @@ For standalone use without computer:
    - **Modern IDE:** Tools → Board Manager → Search "Teensy" → Install
    - **Fallback:** Download Teensyduino from [PJRC](https://www.pjrc.com/teensy/td_download.html)
 3. **Install libraries:** Tools → Manage Libraries → Install "LiquidCrystal I2C" and "Encoder" 
+   - **For DIN MIDI:** Also install "MIDI Library" by Francois Best 
 4. **Download this project** and open `Mini-Teensy-Synth.ino`
 5. **Configure:** Board→Teensy 4.1, USB Type→Audio+MIDI
 6. **Upload!** Your computer will show "Teensy Audio" device
@@ -97,6 +126,8 @@ For standalone use without computer:
 **Menu Navigation:** Click encoder to navigate, turn to adjust values. All parameters accessible via hierarchical menu system.
 
 **Macro Knobs:** Settings → Macro Knobs toggles filter envelope controls between Filter (Attack/Decay/Sustain) and LFO (Rate/Depth/Target) modes.
+
+**MIDI Channel:** Settings → MIDI Channel sets which MIDI channel to receive (1-16, or Omni for all channels).
 
 **Menu Structure:**
 ```

@@ -1,3 +1,18 @@
+/*
+ * MiniTeensy Synth
+ * A 6-voice polyphonic virtual analog synthesizer built with the Teensy 4.1 microcontroller, 
+ * inspired by the classic Minimoog. Features comprehensive synthesis with USB audio/MIDI 
+ * and intuitive menu control.
+ * 
+ * REQUIRED LIBRARIES (install via Arduino Library Manager):
+ * - LiquidCrystal I2C (by Frank de Brabander)
+ * - Encoder (by Paul Stoffregen) 
+ * - MIDI Library (by Francois Best) - only needed if enabling DIN MIDI
+ * 
+ * Built-in Teensy libraries (no installation needed):
+ * - Audio, Wire, SPI, SD, SerialFlash, USBHost_t36
+ */
+
 #include <USBHost_t36.h>
 #include <Audio.h>
 #include <Wire.h>
@@ -6,6 +21,37 @@
 #include <SerialFlash.h>
 #include <LiquidCrystal_I2C.h>
 #include <Encoder.h>
+
+// TODO: Test DIN MIDI
+// Uncomment to enable DIN MIDI support (requires moving enc3 from pin 0)
+// #define ENABLE_DIN_MIDI
+
+/*
+ * DIN MIDI Setup Instructions:
+ * 
+ * HARDWARE REQUIRED:
+ * - 6N138 optocoupler IC
+ * - 220Ω resistor  
+ * - 5-pin DIN MIDI connector
+ * - Standard MIDI interface circuit (see MIDI specification)
+ * 
+ * WIRING:
+ * 1. Build MIDI input circuit: DIN connector → 6N138 optocoupler → 220Ω resistor
+ * 2. Connect MIDI circuit output to Teensy Serial1 RX (Pin 0)
+ * 3. IMPORTANT: Move enc3 (Osc3 Range) CLK wire from Pin 0 to surface mount pin (42-47)
+ * 
+ * USAGE:
+ * - Install "MIDI Library" by Francois Best via Arduino Library Manager
+ * - Uncomment #define ENABLE_DIN_MIDI above
+ * - Supports both USB and DIN MIDI simultaneously
+ * - Uses same MIDI channel setting from Settings menu
+ * - Receives Note On/Off, Control Change, and Pitch Bend
+ */
+
+#ifdef ENABLE_DIN_MIDI
+#include <MIDI.h>
+MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
+#endif
 
 const int MENU_ENCODER_CLK = 14, MENU_ENCODER_DT = 13, MENU_ENCODER_SW = 15;
 
@@ -34,10 +80,11 @@ Encoder menuEncoder(MENU_ENCODER_CLK, MENU_ENCODER_DT);
 long encoderValues[20] = {0};
 long lastEncoderValues[20] = {0};
 // Default parameter values - matches "Init" preset
-float allParameterValues[30] = {
+float allParameterValues[31] = {
   0.417, 0.417, 0.417, 0.500, 0.500, 0.417, 0.417, 0.417, 0.789, 0.789,
   0.789, 1.000, 0.000, 0.000, 0.160, 1.000, 0.000, 0.000, 1.000, 0.016,
-  0.500, 1.000, 0.250, 0.000, 0.000, 0.330, 0.330, 0.000, 0.000, 0.000
+  0.500, 1.000, 0.250, 0.000, 0.000, 0.330, 0.330, 0.000, 0.000, 0.000,
+  0.000  // MIDI Channel (0 = omni, 1-16 = channels)
 };
 
 // Audio synthesis
@@ -170,6 +217,7 @@ int lfoTarget = 1; // 0=Pitch, 1=Filter, 2=Amp
 float modWheelValue = 0.0; // MIDI mod wheel (CC#1) 0-1
 float pitchWheelValue = 0.0; // MIDI pitch wheel -1 to +1
 float lastPitchWheelValue = 0.0; // Track changes to prevent unnecessary updates
+int midiChannel = 0; // MIDI channel (1-16, 0 = omni)
 unsigned long lastMidiTime = 0; // For MIDI throttling
 int playMode = 1; // 0=Mono, 1=Poly, 2=Legato
 float glideTime = 0.0; // Glide/portamento time (0 = off, 0.1-1.0 = 100ms to 10s)
@@ -189,7 +237,7 @@ const char* controlNames[] = {
   "Osc1 Wave", "Osc2 Wave", "Osc3 Wave", "Volume 1", "Volume 2", 
   "Volume 3", "Cutoff", "Resonance", "Filt Attack", "Filt Decay",
   "Filt Sustain", "Noise Vol", "Amp Attack", "Amp Sustain", "Amp Decay",
-  "Osc1 Fine", "Filt Strength", "LFO Rate", "LFO Depth", "LFO Toggle", "LFO Target", "Play Mode", "Glide Time", "Noise Type", "Macro Mode"
+  "Osc1 Fine", "Filt Strength", "LFO Rate", "LFO Depth", "LFO Toggle", "LFO Target", "Play Mode", "Glide Time", "Noise Type", "Macro Mode", "MIDI Channel"
 };
 
 bool macroMode = false;
@@ -288,7 +336,8 @@ enum MenuState {
   NOISE_TYPE,
   // Settings sub-menus
   SETTINGS,
-  MACRO_KNOBS
+  MACRO_KNOBS,
+  MIDI_CHANNEL
 };
 
 MenuState currentMenuState = PARENT_MENU;
@@ -328,6 +377,7 @@ int getParameterIndex(MenuState state) {
     case GLIDE_TIME: return 27;
     case NOISE_TYPE: return 28;
     case MACRO_KNOBS: return 29;
+    case MIDI_CHANNEL: return 30;
     default: return -1;
   }
 }
@@ -494,11 +544,43 @@ void updateGlide() {
   }
 }
 
+#ifdef ENABLE_DIN_MIDI
+// DIN MIDI callback handlers
+void OnNoteOn(byte channel, byte note, byte velocity) {
+  if (midiChannel != 0 && channel != midiChannel) return;
+  noteOn(note, velocity);
+}
+
+void OnNoteOff(byte channel, byte note, byte velocity) {
+  if (midiChannel != 0 && channel != midiChannel) return;
+  noteOff(note);
+}
+
+void OnControlChange(byte channel, byte number, byte value) {
+  if (midiChannel != 0 && channel != midiChannel) return;
+  if (number == 1) modWheelValue = value / 127.0;
+}
+
+void OnPitchBend(byte channel, int bend) {
+  if (midiChannel != 0 && channel != midiChannel) return;
+  pitchWheelValue = (bend - 8192) / 8192.0;
+}
+#endif
+
 void setup() {
   Serial.begin(9600);
   AudioMemory(48); // Reduced from 60 to minimize latency
   
   // USB Device MIDI is automatically initialized
+  
+#ifdef ENABLE_DIN_MIDI
+  // Initialize DIN MIDI
+  MIDI.begin(MIDI_CHANNEL_OMNI);
+  MIDI.setHandleNoteOn(OnNoteOn);
+  MIDI.setHandleNoteOff(OnNoteOff);
+  MIDI.setHandleControlChange(OnControlChange);
+  MIDI.setHandlePitchBend(OnPitchBend);
+#endif
   
   // Initialize Audio
   
@@ -846,6 +928,9 @@ void updateSynthParameter(int paramIndex, float val) {
     case 29: // Macro Mode (menu-only)
       macroMode = (val > 0.5); // Toggle at 50%
       break;
+    case 30: // MIDI Channel
+      midiChannel = (int)(val * 16.0); // 0-16 (0 = omni, 1-16 = channels)
+      break;
   }
 }
 
@@ -884,7 +969,7 @@ void updateEncoderParameter(int paramIndex, int change) {
     case 13: case 14: case 15: case 17: case 18: case 19: // Envelope controls - 128 steps (enc14-enc20 /4)
       increment = 1.0/128.0; // = 0.0078125 - exact 128-step resolution
       break;
-    case 24: case 25: case 26: case 28: case 29: // Toggle/discrete controls (LFO Toggle, LFO Target, Play Mode, Noise Type, Macro Mode)
+    case 24: case 25: case 26: case 28: case 29: case 30: // Toggle/discrete controls (LFO Toggle, LFO Target, Play Mode, Noise Type, Macro Mode, MIDI Channel)
       increment = 0.5; // Large steps for immediate toggle response
       break;
     default:
@@ -1500,7 +1585,8 @@ void navigateMenuForward() {
       break;
     case SETTINGS:
       if (menuIndex == 0) currentMenuState = MACRO_KNOBS;
-      else if (menuIndex == 1) {
+      else if (menuIndex == 1) currentMenuState = MIDI_CHANNEL;
+      else if (menuIndex == 2) {
         currentMenuState = PARENT_MENU;
         menuIndex = 9;
         return;
@@ -1552,7 +1638,7 @@ void incrementMenuIndex() {
       break;
     case SETTINGS:
       menuIndex++;
-      if (menuIndex > 1) menuIndex = 0; // Settings has 2 items (0-1) including Back
+      if (menuIndex > 2) menuIndex = 0; // Settings has 3 items (0-2) including Back
       break;
     default:
       // In a parameter menu, no navigation
@@ -1600,7 +1686,7 @@ void decrementMenuIndex() {
       break;
     case SETTINGS:
       menuIndex--;
-      if (menuIndex < 0) menuIndex = 1; // Wrap to Back button (0-1)
+      if (menuIndex < 0) menuIndex = 2; // Wrap to Back button (0-2)
       break;
     default:
       // In a parameter menu, no navigation
@@ -1705,6 +1791,7 @@ void backMenuAction() {
       currentMenuState = VOICE_MODE;
       break;
     case MACRO_KNOBS:
+    case MIDI_CHANNEL:
       currentMenuState = SETTINGS;
       break;
   }
@@ -1747,6 +1834,8 @@ void handleEncoder() {
             allParameterValues[paramIndex] = constrain(allParameterValues[paramIndex] + 0.5, 0.0, 1.0);
           } else if (paramIndex == 29) { // Macro Mode - instant toggle with single turn
             allParameterValues[paramIndex] = constrain(allParameterValues[paramIndex] + 0.5, 0.0, 1.0);
+          } else if (paramIndex == 30) { // MIDI Channel - step through channels
+            allParameterValues[paramIndex] = constrain(allParameterValues[paramIndex] + (1.0/16.0), 0.0, 1.0);
           } else {
             // All continuous parameters - consistent 128-step feel across all controls
             allParameterValues[paramIndex] = constrain(allParameterValues[paramIndex] + 1.0/128.0, 0.0, 1.0);
@@ -1763,6 +1852,8 @@ void handleEncoder() {
             allParameterValues[paramIndex] = constrain(allParameterValues[paramIndex] - 0.5, 0.0, 1.0);
           } else if (paramIndex == 29) { // Macro Mode - instant toggle with single turn
             allParameterValues[paramIndex] = constrain(allParameterValues[paramIndex] - 0.5, 0.0, 1.0);
+          } else if (paramIndex == 30) { // MIDI Channel - step through channels
+            allParameterValues[paramIndex] = constrain(allParameterValues[paramIndex] - (1.0/16.0), 0.0, 1.0);
           } else {
             // All continuous parameters - consistent 128-step feel across all controls
             allParameterValues[paramIndex] = constrain(allParameterValues[paramIndex] - 1.0/128.0, 0.0, 1.0);
@@ -2078,7 +2169,8 @@ void updateDisplay() {
           lcd.print("Settings");
           lcd.setCursor(0, 1);
           if (menuIndex == 0) lcd.print("Macro Knobs");
-          else if (menuIndex == 1) lcd.print("< Back");
+          else if (menuIndex == 1) lcd.print("MIDI Channel");
+          else if (menuIndex == 2) lcd.print("< Back");
           break;
           
         case MACRO_KNOBS:
@@ -2088,6 +2180,16 @@ void updateDisplay() {
             lcd.print("LFO Controls");
           } else {
             lcd.print("Filter Env");
+          }
+          break;
+          
+        case MIDI_CHANNEL:
+          lcd.print("MIDI Channel:");
+          lcd.setCursor(0, 1);
+          if (midiChannel == 0) {
+            lcd.print("Omni");
+          } else {
+            lcd.print(midiChannel);
           }
           break;
           
@@ -2154,6 +2256,12 @@ void updateDisplay() {
               }
             } else if (paramIndex == 29) { // Macro Mode
               lcd.print(macroMode ? "LFO Controls" : "Filter Env");
+            } else if (paramIndex == 30) { // MIDI Channel
+              if (midiChannel == 0) {
+                lcd.print("Omni");
+              } else {
+                lcd.print(midiChannel);
+              }
             } else {
               // Show 0-127 values (MIDI standard)
               int displayValue = (int)(allParameterValues[paramIndex] * 127);
@@ -2187,8 +2295,14 @@ void loop() {
   // Process ALL USB Device MIDI messages immediately for minimal latency
   while (usbMIDI.read()) {
     uint8_t type = usbMIDI.getType();
+    uint8_t channel = usbMIDI.getChannel();
     uint8_t data1 = usbMIDI.getData1();
     uint8_t data2 = usbMIDI.getData2();
+    
+    // Filter by MIDI channel (0 = omni mode, receive all channels)
+    if (midiChannel != 0 && channel != midiChannel) {
+      continue; // Skip messages not on our channel
+    }
     
     if (type == usbMIDI.NoteOn && data2 > 0) {
       noteOn(data1, data2);
@@ -2207,6 +2321,11 @@ void loop() {
       // No serial output for performance
     }
   }
+  
+#ifdef ENABLE_DIN_MIDI
+  // Process DIN MIDI messages
+  MIDI.read();
+#endif
   
   // Read controls and update synth
   readAllControls();
