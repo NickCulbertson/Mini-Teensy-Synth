@@ -2,7 +2,7 @@
 
 A **6-voice polyphonic virtual analog synthesizer** built with the Teensy 4.1 microcontroller, inspired by the classic **Minimoog**. Features comprehensive synthesis with USB audio/MIDI and intuitive menu control.
 
-[*“DIY Minimoog Inspired Synth | A Teensy Powered Tribute”*](https://youtu.be/ETfcjzIK8Po)
+**Video:** [*“DIY Minimoog Inspired Synth | A Teensy Powered Tribute”*](https://youtu.be/ETfcjzIK8Po)
 
 [![Watch the video](https://img.youtube.com/vi/ETfcjzIK8Po/hqdefault.jpg)](https://youtu.be/ETfcjzIK8Po)
 
