@@ -6,7 +6,7 @@ A **6-voice polyphonic virtual analog synthesizer** built with the Teensy 4.1 mi
 
 [![Watch the video](https://img.youtube.com/vi/ETfcjzIK8Po/hqdefault.jpg)](https://youtu.be/ETfcjzIK8Po)
 
-*Featured on [Synth Anatomy](https://synthanatomy.com/2025/11/moby-pixel-miniteensy-a-teensy-based-diy-polyphonic-minimoog.html), [Synthtopia](https://www.synthtopia.com/content/2025/11/25/diy-miniteensy-is-an-open-source-polysynth-based-on-the-minimoog-synth-voice/), and [Matrix Synth](https://www.matrixsynth.com/2025/11/diy-minimoog-inspired-synth-teensy.html)! 🚀*
+**Featured on [Synth Anatomy](https://synthanatomy.com/2025/11/moby-pixel-miniteensy-a-teensy-based-diy-polyphonic-minimoog.html), [Synthtopia](https://www.synthtopia.com/content/2025/11/25/diy-miniteensy-is-an-open-source-polysynth-based-on-the-minimoog-synth-voice/), and [Matrix Synth](https://www.matrixsynth.com/2025/11/diy-minimoog-inspired-synth-teensy.html)! 🚀**
 
 ## Key Features
 - **6-voice polyphony** with 3 oscillators per voice (18 total)
