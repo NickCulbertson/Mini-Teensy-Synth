@@ -60,8 +60,8 @@ Video: [**DIY Minimoog Inspired Synth | A Teensy Powered Tribute**](https://yout
     │  9  │ enc4 DT  (Osc1 Fine)             │ 17  │ enc18 CLK (Amp Attack)
     │ 10  │ enc8 CLK (Osc3 Wave)             │ 16  │ enc18 DT  (Amp Attack)
     │ 11  │ enc8 DT  (Osc3 Wave)             │ 15  │ Menu Encoder SW (Push Button)
-    │ 12  │ enc7 CLK (Osc2 Wave)             │ 14  │ Menu Encoder CLK
-    └─────┘                                  │ 13  │ Menu Encoder DT 
+    │ 12  │ enc7 CLK (Osc2 Wave)             │ 14  │ Menu Encoder CLK (Filter Cutoff when not in menu)
+    └─────┘                                  │ 13  │ Menu Encoder DT  (Filter Cutoff when not in menu)
                                              └─────┘
     │ 24  │ enc7 DT  (Osc2 Wave)             │ 41  │ enc14 DT  (Filter Attack/LFO Rate)
     │ 25  │ enc6 CLK (Osc1 Wave)             │ 40  │ enc20 CLK (Amp Sustain)
