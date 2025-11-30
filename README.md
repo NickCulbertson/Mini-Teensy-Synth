@@ -96,7 +96,7 @@ GND                 →  GND               │  Ground
 **LCD I2C Connections:**
 ```
 LCD Pin    →  Teensy 4.1 Pin    │  Function
-─────────────────────────────────┼─────────────────
+────────────────────────────────┼─────────────────
 VCC        →  5V (VIN)          │  Power
 GND        →  GND               │  Ground
 SDA        →  18                │  I2C Data
@@ -112,7 +112,7 @@ SCL        →  19                │  I2C Clock
 
 **All Encoder Connections:**
 ```
-Function             │ Encoder │ CLK Pin │ DT Pin  │ Purpose
+Function            │ Encoder │ CLK Pin │ DT Pin  │ Purpose
 ────────────────────┼─────────┼─────────┼─────────┼──────────────────────
 Osc1 Range          │  enc1   │    4    │    5    │ Footages: 32', 16', 8', 4', 2'
 Osc2 Range          │  enc2   │    2    │    3    │ Footages: 32', 16', 8', 4', 2'  
