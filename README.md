@@ -41,35 +41,194 @@ Video: [**DIY Minimoog Inspired Synth | A Teensy Powered Tribute**](https://yout
 - LCD 2X16 (https://www.amazon.com/Hosyond-Display-Module-Arduino-Raspberry/dp/B0BWTFN9WF/ref=sr_1_2)
 - Knobs (https://www.amazon.com/Taiss-Silver-Rotary-Potentiometer-Diameter/dp/B07F25NMJ7/ref=sr_1_5)
 
-## Wiring
+## Detailed Wiring & Pinout
+
+### **Teensy 4.1 Complete Pinout Assignment**
+
+```
+                    Teensy 4.1 Pinout Map
+    ┌─────┐                                  ┌─────┐
+    │  0  │ enc3 CLK (Osc3 Range)         5V │ VIN │ LCD Power
+    │  1  │ enc3 DT  (Osc3 Range)            │ GND │ All encoders daisy-chained to ground + LCD and Menu
+    │  2  │ enc2 CLK (Osc2 Range)            │ 3V  │ Menu Encoder Power
+    │  3  │ enc2 DT  (Osc2 Range)            │ 23  │ enc15 CLK (Filter Decay/LFO Depth)
+    │  4  │ enc1 CLK (Osc1 Range)            │ 22  │ enc15 DT  (Filter Decay/LFO Depth) 
+    │  5  │ enc1 DT  (Osc1 Range)            │ 21  │ enc11 CLK (Noise Volume)
+    │  6  │ enc5 CLK (Osc2 Fine)             │ 20  │ enc11 DT  (Noise Volume)
+    │  7  │ enc5 DT  (Osc2 Fine)             │ 19  │ SCL (LCD I2C) LCD Clock
+    │  8  │ enc4 CLK (Osc1 Fine)             │ 18  │ SDA (LCD I2C) LCD Data
+    │  9  │ enc4 DT  (Osc1 Fine)             │ 17  │ enc18 CLK (Amp Attack)
+    │ 10  │ enc8 CLK (Osc3 Wave)             │ 16  │ enc18 DT  (Amp Attack)
+    │ 11  │ enc8 DT  (Osc3 Wave)             │ 15  │ Menu Encoder SW (Push Button)
+    │ 12  │ enc7 CLK (Osc2 Wave)             │ 14  │ Menu Encoder CLK
+    └─────┘                                  │ 13  │ Menu Encoder DT 
+                                             └─────┘
+    │ 24  │ enc7 DT  (Osc2 Wave)             │ 41  │ enc14 DT  (Filter Attack/LFO Rate)
+    │ 25  │ enc6 CLK (Osc1 Wave)             │ 40  │ enc20 CLK (Amp Sustain)
+    │ 26  │ enc10 DT (Osc2 Volume)           │ 39  │ enc20 DT  (Amp Sustain)
+    │ 27  │ enc6 DT  (Osc1 Wave)             │ 38  │ enc19 CLK (Amp Decay)
+    │ 28  │ enc10 CLK(Osc2 Volume)           │ 37  │ enc19 DT  (Amp Decay)
+    │ 29  │ enc9 CLK (Osc1 Volume)           │ 36  │ enc16 CLK (Filter Sustain/LFO Target)
+    │ 30  │ enc9 DT  (Osc1 Volume)           │ 35  │ enc16 DT  (Filter Sustain/LFO Target)
+    │ 31  │ enc17 CLK(Noise Volume)          │ 34  │ enc13 CLK(Filter Cutoff)
+    │ 32  │ enc17 DT (Noise Volume)          │ 33  │ enc13 DT (Filter Cutoff)
+    └─────┘                                  │     │
+                                             │ 50  │ enc14 CLK (Filter Attack/LFO Rate) (Under the Teensy)
+                                             │ 51  │
+                                             │ 52  │
+                                             └─────┘
+```
 
 ### **Minimal Build (LCD + 1 Encoder)**
-Perfect for testing or budget builds:
+Perfect for testing or easier builds:
+
+**Menu Encoder Connections:**
 ```
-Menu Encoder: CLK→14, DT→13, SW→15
-LCD (I2C):   SDA→18, SCL→19, VCC→3.3V, GND→GND
-Power:       USB cable to computer
+Menu Encoder Pin    →  Teensy 4.1 Pin    │  Function
+─────────────────────────────────────────┼─────────────
+CLK                 →  14                │  Rotary Clock
+DT                  →  13                │  Rotary Data  
+SW (Push Button)    →  15                │  Menu Select
+VCC                 →  3.3V              │  Power (3.3V)
+GND                 →  GND               │  Ground
 ```
+
+**LCD I2C Connections:**
+```
+LCD Pin    →  Teensy 4.1 Pin    │  Function
+─────────────────────────────────┼─────────────────
+VCC        →  5V (VIN)          │  Power
+GND        →  GND               │  Ground
+SDA        →  18                │  I2C Data
+SCL        →  19                │  I2C Clock
+```
+
+**Power:**
+- Single USB cable to computer provides power and audio/MIDI
+
 **That's it!** All synthesis parameters accessible through menu.
 
-### **Full Build (20 Encoders)**
-**Parameter Encoder Pins (configurable in code):**
+### **Full Build (20 Encoders) - Complete Wiring**
+
+**All Encoder Connections:**
 ```
-Osc Ranges:  enc1(4,5), enc2(2,3), enc3(0,1)
-Osc Fine:    enc4(8,9), enc5(6,7)
-Osc Waves:   enc6(25,27), enc7(12,24), enc8(10,11)  
-Volumes:     enc9(29,30), enc10(28,26), enc11(21,20)
-Filter:      enc13(34,33), enc14(50,41), enc15(23,22), enc16(36,35)
-Noise Vol:   enc17(31,32)
-Amp Env:     enc18(17,16), enc19(38,37), enc20(40,39)
+Function             │ Encoder │ CLK Pin │ DT Pin  │ Purpose
+────────────────────┼─────────┼─────────┼─────────┼──────────────────────
+Osc1 Range          │  enc1   │    4    │    5    │ Footages: 32', 16', 8', 4', 2'
+Osc2 Range          │  enc2   │    2    │    3    │ Footages: 32', 16', 8', 4', 2'  
+Osc3 Range          │  enc3   │    0    │    1    │ Footages: 32', 16', 8', 4', 2'
+Osc1 Fine Tune      │  enc4   │    8    │    9    │ ±7 semitone detune
+Osc2 Fine Tune      │  enc5   │    6    │    7    │ ±7 semitone detune
+Osc1 Waveform       │  enc6   │   25    │   27    │ Triangle, Sawtooth, Square, Pulse, etc.
+Osc2 Waveform       │  enc7   │   12    │   24    │ Triangle, Sawtooth, Square, Pulse, etc.
+Osc3 Waveform       │  enc8   │   10    │   11    │ Triangle, Sawtooth, Square, Pulse, etc.
+Osc1 Volume         │  enc9   │   29    │   30    │ Mixer level control
+Osc2 Volume         │ enc10   │   28    │   26    │ Mixer level control  
+Osc3 Volume         │ enc11   │   21    │   20    │ Mixer level control
+Menu Navigation     │ menu    │   14    │   13    │ Main interface (SW→15)
+Filter Cutoff       │ enc13   │   34    │   33    │ 20Hz-20kHz frequency
+Filter Envelope Amt │ enc14   │   50    │   41    │ Attack / LFO Rate*
+Filter Resonance    │ enc15   │   23    │   22    │ Decay / LFO Depth*
+Filter Sustain      │ enc16   │   36    │   35    │ Sustain / LFO Target*
+Noise Volume        │ enc17   │   31    │   32    │ White/Pink noise mix level
+Amp Attack          │ enc18   │   17    │   16    │ Envelope attack time
+Amp Decay           │ enc19   │   38    │   37    │ Envelope decay time
+Amp Sustain         │ enc20   │   40    │   39    │ Envelope sustain level
+```
+*Macro Mode: enc14/enc15/enc16 switch between Filter envelope and LFO controls
+
+**Standard Encoder Wiring (for each encoder):**
+```
+Encoder Terminal    →  Connection              │  Notes
+─────────────────────────────────────────────┼──────────────────────
+CLK                 →  Specific Teensy pin    │  See table above
+DT                  →  Specific Teensy pin    │  See table above  
+GND/-               →  Common ground bus      │  Daisy-chain ALL grounds
 ```
 
-**Encoder Wiring:**
-- **CLK/DT pins** to Teensy as shown above
-- **All encoder GND pins** daisy-chained to Teensy GND
-- **Menu encoder VCC pin** to Teensy 3.3V (if ebcoder has a breakout board)
+**IMPORTANT - Ground Connections:**
+All encoder GND pins must be connected together and to Teensy GND:
+- **Daisy-chain method:** Connect GND wire from encoder 1 → encoder 2 → encoder 3 → ... → Teensy GND
 
-*Macro Mode: enc14/enc15/enc16 become LFO Rate/Depth/Target instead of Filter Attack/Decay/Sustain*
+**Power Distribution:**
+```
+Power Rail     │  Source        │  Connects To
+──────────────┼────────────────┼─────────────────────────────
+5V             │  USB port      │  Teensy VIN, LCD VCC
+3.3V           │  Teensy 4.1    │  Encoder VCC (if used)
+GND            │  Teensy 4.1    │  All encoder GND, LCD GND
+```
+
+**Critical Power Notes:**
+- **Use 3.3V only** - Teensy 4.1 GPIO pins are NOT 5V tolerant
+- **Current capacity:** 3.3V rail can supply up to 250mA
+- **Encoder power:** Most encoders work fine without VCC connection
+- **LCD power:** Use 5V (VIN) for proper brightness with I2C backpack boards
+- **I2C signals:** Always remain at 3.3V logic levels (safe for Teensy)
+
+### **Wiring Best Practices & Troubleshooting**
+
+**Construction Tips:**
+```
+Wire Management         │  Recommendation
+──────────────────────┼─────────────────────────────────────
+Wire Gauge            │  22-26 AWG solid core for breadboard
+                      │  22-24 AWG stranded for final build
+Wire Colors           │  Red=3.3V, Black=GND, Other=Signal
+Wire Length           │  Keep under 6 inches for clean signals
+Soldering             │  Use flux, clean joints, heat shrink
+Testing               │  Test each encoder individually first
+```
+
+**Common Issues & Solutions:**
+```
+Problem                    │  Cause                 │  Solution
+─────────────────────────┼────────────────────────┼──────────────────────
+LCD shows garbage text   │  Wrong I2C address     │  Try 0x3F instead of 0x27
+LCD blank/dark           │  No power/contrast     │  Check 3.3V, adjust contrast pot
+Encoder jumpy/erratic    │  Poor connections      │  Check CLK/DT wiring, add bypass caps
+Menu encoder not working │  Wrong pins            │  Verify CLK→14, DT→13, SW→15
+No USB audio/MIDI       │  Wrong USB type        │  Set "USB Type" to "Audio" in Arduino IDE
+Teensy won't program    │  Code compilation      │  Install all required libraries
+Some encoders work badly │  Electrical noise      │  Add 0.1µF caps between each encoder 3.3V-GND
+Audio crackling         │  USB power issues      │  Use powered USB hub or shorter cable
+```
+
+**I2C LCD Address Detection:**
+If LCD doesn't work, scan for the correct I2C address:
+```cpp
+// Add this temporary code to setup() to find LCD address
+Wire.begin();
+Serial.println("Scanning I2C addresses...");
+for(byte i = 8; i < 120; i++) {
+  Wire.beginTransmission(i);
+  if(Wire.endTransmission() == 0) {
+    Serial.print("Found device at 0x");
+    if(i < 16) Serial.print("0");
+    Serial.println(i, HEX);
+  }
+}
+```
+
+**Encoder Bypass Capacitors (Optional but Recommended):**
+For cleaner operation, add 0.1µF ceramic capacitors:
+- One capacitor between each encoder's 3.3V and GND pins
+- Reduces electrical noise and improves reliability
+- Place close to encoder, not at Teensy
+
+**Physical Construction Tips:**
+- Mount Teensy 4.1 with standoffs to prevent shorts
+- Use a common ground bus (thick wire or PCB trace)
+- Keep encoder wires away from USB cable to reduce noise
+- Consider a metal enclosure for RFI shielding
+- Label all connections during build for future maintenance
+
+**Testing Procedure:**
+1. **Power test:** Connect only Teensy + LCD, verify LCD backlight
+2. **Menu test:** Add menu encoder, verify menu navigation works
+3. **Encoder test:** Add encoders one by one, test each in menu
+4. **Audio test:** Connect to computer, verify "Teensy Audio" device appears
+5. **MIDI test:** Send MIDI notes, verify synthesis works
 
 ### **Audio + MIDI Options**
 
