@@ -139,8 +139,8 @@ Amp Sustain         │ enc20   │   40    │   39    │ Envelope sustain lev
 
 **Standard Encoder Wiring (for each encoder):**
 ```
-Encoder Terminal    →  Connection              │  Notes
-─────────────────────────────────────────────┼──────────────────────
+Encoder Terminal    →  Connection             │  Notes
+──────────────────────────────────────-───────┼──────────────────────
 CLK                 →  Specific Teensy pin    │  See table above
 DT                  →  Specific Teensy pin    │  See table above  
 GND/-               →  Common ground bus      │  Daisy-chain ALL grounds
@@ -153,80 +153,16 @@ All encoder GND pins must be connected together and to Teensy GND:
 **Power Distribution:**
 ```
 Power Rail     │  Source        │  Connects To
-──────────────┼────────────────┼─────────────────────────────
+───────-───────┼────────────────┼─────────────────────────────
 5V             │  USB port      │  Teensy VIN, LCD VCC
-3.3V           │  Teensy 4.1    │  Encoder VCC (if used)
+3.3V           │  Teensy 4.1    │  Menu Encoder VCC
 GND            │  Teensy 4.1    │  All encoder GND, LCD GND
 ```
-
-**Critical Power Notes:**
-- **Use 3.3V only** - Teensy 4.1 GPIO pins are NOT 5V tolerant
-- **Current capacity:** 3.3V rail can supply up to 250mA
-- **Encoder power:** Most encoders work fine without VCC connection
-- **LCD power:** Use 5V (VIN) for proper brightness with I2C backpack boards
-- **I2C signals:** Always remain at 3.3V logic levels (safe for Teensy)
-
-### **Wiring Best Practices & Troubleshooting**
-
-**Construction Tips:**
-```
-Wire Management         │  Recommendation
-──────────────────────┼─────────────────────────────────────
-Wire Gauge            │  22-26 AWG solid core for breadboard
-                      │  22-24 AWG stranded for final build
-Wire Colors           │  Red=3.3V, Black=GND, Other=Signal
-Wire Length           │  Keep under 6 inches for clean signals
-Soldering             │  Use flux, clean joints, heat shrink
-Testing               │  Test each encoder individually first
-```
-
-**Common Issues & Solutions:**
-```
-Problem                    │  Cause                 │  Solution
-─────────────────────────┼────────────────────────┼──────────────────────
-LCD shows garbage text   │  Wrong I2C address     │  Try 0x3F instead of 0x27
-LCD blank/dark           │  No power/contrast     │  Check 3.3V, adjust contrast pot
-Encoder jumpy/erratic    │  Poor connections      │  Check CLK/DT wiring, add bypass caps
-Menu encoder not working │  Wrong pins            │  Verify CLK→14, DT→13, SW→15
-No USB audio/MIDI       │  Wrong USB type        │  Set "USB Type" to "Audio" in Arduino IDE
-Teensy won't program    │  Code compilation      │  Install all required libraries
-Some encoders work badly │  Electrical noise      │  Add 0.1µF caps between each encoder 3.3V-GND
-Audio crackling         │  USB power issues      │  Use powered USB hub or shorter cable
-```
-
-**I2C LCD Address Detection:**
-If LCD doesn't work, scan for the correct I2C address:
-```cpp
-// Add this temporary code to setup() to find LCD address
-Wire.begin();
-Serial.println("Scanning I2C addresses...");
-for(byte i = 8; i < 120; i++) {
-  Wire.beginTransmission(i);
-  if(Wire.endTransmission() == 0) {
-    Serial.print("Found device at 0x");
-    if(i < 16) Serial.print("0");
-    Serial.println(i, HEX);
-  }
-}
-```
-
-**Encoder Bypass Capacitors (Optional but Recommended):**
-For cleaner operation, add 0.1µF ceramic capacitors:
-- One capacitor between each encoder's 3.3V and GND pins
-- Reduces electrical noise and improves reliability
-- Place close to encoder, not at Teensy
-
-**Physical Construction Tips:**
-- Mount Teensy 4.1 with standoffs to prevent shorts
-- Use a common ground bus (thick wire or PCB trace)
-- Keep encoder wires away from USB cable to reduce noise
-- Consider a metal enclosure for RFI shielding
-- Label all connections during build for future maintenance
 
 **Testing Procedure:**
 1. **Power test:** Connect only Teensy + LCD, verify LCD backlight
 2. **Menu test:** Add menu encoder, verify menu navigation works
-3. **Encoder test:** Add encoders one by one, test each in menu
+3. **Encoder test:** Add other control encoders
 4. **Audio test:** Connect to computer, verify "Teensy Audio" device appears
 5. **MIDI test:** Send MIDI notes, verify synthesis works
 
