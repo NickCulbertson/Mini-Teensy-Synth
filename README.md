@@ -70,8 +70,8 @@ Video: [**DIY Minimoog Inspired Synth | A Teensy Powered Tribute**](https://yout
     │ 28  │ enc10 CLK(Osc2 Volume)           │ 37  │ enc19 DT  (Amp Decay)
     │ 29  │ enc9 CLK (Osc1 Volume)           │ 36  │ enc16 CLK (Filter Sustain/LFO Target)
     │ 30  │ enc9 DT  (Osc1 Volume)           │ 35  │ enc16 DT  (Filter Sustain/LFO Target)
-    │ 31  │ enc17 CLK(Noise Volume)          │ 34  │ enc13 CLK(Filter Cutoff)
-    │ 32  │ enc17 DT (Noise Volume)          │ 33  │ enc13 DT (Filter Cutoff)
+    │ 31  │ enc17 CLK(Noise Volume)          │ 34  │ enc13 CLK (Filter Resonance)
+    │ 32  │ enc17 DT (Noise Volume)          │ 33  │ enc13 DT  (Filter Resonance)
     └─────┘                                  │     │
                                              │ 50  │ enc14 CLK (Filter Attack/LFO Rate) (Under the Teensy)
                                              │ 51  │
