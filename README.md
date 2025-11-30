@@ -125,10 +125,10 @@ Osc3 Waveform       │  enc8   │   10    │   11    │ Triangle, Sawtooth, 
 Osc1 Volume         │  enc9   │   29    │   30    │ Mixer level control
 Osc2 Volume         │ enc10   │   28    │   26    │ Mixer level control  
 Osc3 Volume         │ enc11   │   21    │   20    │ Mixer level control
-Menu Navigation     │ menu    │   14    │   13    │ Main interface (SW→15)
-Filter Cutoff       │ enc13   │   34    │   33    │ 20Hz-20kHz frequency
+Menu Navigation     │ menu    │   14    │   13    │ Main interface (SW→15) / Filter Cutoff when not in menu
+Filter Resonance    │ enc13   │   34    │   33    │ Resonance Q factor
 Filter Envelope Amt │ enc14   │   50    │   41    │ Attack / LFO Rate*
-Filter Resonance    │ enc15   │   23    │   22    │ Decay / LFO Depth*
+Filter Decay        │ enc15   │   23    │   22    │ Decay / LFO Depth*
 Filter Sustain      │ enc16   │   36    │   35    │ Sustain / LFO Target*
 Noise Volume        │ enc17   │   31    │   32    │ White/Pink noise mix level
 Amp Attack          │ enc18   │   17    │   16    │ Envelope attack time
