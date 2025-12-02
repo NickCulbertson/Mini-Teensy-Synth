@@ -53,7 +53,7 @@
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 #endif
 
-const int MENU_ENCODER_CLK = 14, MENU_ENCODER_DT = 13, MENU_ENCODER_SW = 15;
+const int MENU_ENCODER_CLK = 13, MENU_ENCODER_DT = 14, MENU_ENCODER_SW = 15;
 
 // Encoder definitions
 Encoder enc1(4, 5);
@@ -75,7 +75,7 @@ Encoder enc17(31, 32);
 Encoder enc18(17, 16);
 Encoder enc19(38, 37);
 Encoder enc20(40, 39);
-Encoder menuEncoder(MENU_ENCODER_CLK, MENU_ENCODER_DT);
+Encoder menuEncoder(MENU_ENCODER_DT, MENU_ENCODER_CLK);
 
 long encoderValues[20] = {0};
 long lastEncoderValues[20] = {0};

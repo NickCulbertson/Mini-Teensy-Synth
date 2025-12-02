@@ -60,8 +60,8 @@ Video: [**DIY Minimoog Inspired Synth | A Teensy Powered Tribute**](https://yout
     │  9  │ enc4 DT  (Osc1 Fine)             │ 17  │ enc18 CLK (Amp Attack)
     │ 10  │ enc8 CLK (Osc3 Wave)             │ 16  │ enc18 DT  (Amp Attack)
     │ 11  │ enc8 DT  (Osc3 Wave)             │ 15  │ Menu Encoder SW (Push Button)
-    │ 12  │ enc7 CLK (Osc2 Wave)             │ 14  │ Menu Encoder CLK (Filter Cutoff when not in menu)
-    └─────┘                                  │ 13  │ Menu Encoder DT  (Filter Cutoff when not in menu)
+    │ 12  │ enc7 CLK (Osc2 Wave)             │ 14  │ Menu Encoder DT (Filter Cutoff when not in menu)
+    └─────┘                                  │ 13  │ Menu Encoder CLK  (Filter Cutoff when not in menu)
                                              └─────┘
     │ 24  │ enc7 DT  (Osc2 Wave)             │ 41  │ enc14 DT  (Filter Attack/LFO Rate)
     │ 25  │ enc6 CLK (Osc1 Wave)             │ 40  │ enc20 CLK (Amp Sustain)
@@ -86,8 +86,8 @@ Perfect for testing or easier builds:
 ```
 Menu Encoder Pin    →  Teensy 4.1 Pin    │  Function
 ─────────────────────────────────────────┼─────────────
-CLK                 →  14                │  Rotary Clock
-DT                  →  13                │  Rotary Data  
+CLK                 →  13                │  Rotary Clock
+DT                  →  14                │  Rotary Data  
 SW (Push Button)    →  15                │  Menu Select
 VCC                 →  3.3V              │  Power (3.3V)
 GND                 →  GND               │  Ground
@@ -125,7 +125,7 @@ Osc3 Waveform       │  enc8   │   10    │   11    │ Triangle, Sawtooth, 
 Osc1 Volume         │  enc9   │   29    │   30    │ Mixer level control
 Osc2 Volume         │ enc10   │   28    │   26    │ Mixer level control  
 Osc3 Volume         │ enc11   │   21    │   20    │ Mixer level control
-Menu Navigation     │ menu    │   14    │   13    │ Main interface (SW→15) / Filter Cutoff when not in menu
+Menu Navigation     │ menu    │   13    │   14    │ Main interface (SW→15) / Filter Cutoff when not in menu
 Filter Resonance    │ enc13   │   34    │   33    │ Resonance Q factor
 Filter Envelope Amt │ enc14   │   50    │   41    │ Attack / LFO Rate*
 Filter Decay        │ enc15   │   23    │   22    │ Decay / LFO Depth*
