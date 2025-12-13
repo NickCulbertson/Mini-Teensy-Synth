@@ -53,8 +53,8 @@ Video: [**DIY Minimoog Inspired Synth | A Teensy Powered Tribute**](https://yout
     │  2  │ enc2 CLK (Osc2 Range)            │ 3V  │ Menu Encoder Power
     │  3  │ enc2 DT  (Osc2 Range)            │ 23  │ enc15 CLK (Filter Decay/LFO Depth)
     │  4  │ enc1 CLK (Osc1 Range)            │ 22  │ enc15 DT  (Filter Decay/LFO Depth) 
-    │  5  │ enc1 DT  (Osc1 Range)            │ 21  │ enc11 CLK (Noise Volume)
-    │  6  │ enc5 CLK (Osc2 Fine)             │ 20  │ enc11 DT  (Noise Volume)
+    │  5  │ enc1 DT  (Osc1 Range)            │ 21  │ enc11 CLK (Osc3 Volume)
+    │  6  │ enc5 CLK (Osc2 Fine)             │ 20  │ enc11 DT  (Osc3 Volume)
     │  7  │ enc5 DT  (Osc2 Fine)             │ 19  │ SCL (LCD I2C) LCD Clock
     │  8  │ enc4 CLK (Osc1 Fine)             │ 18  │ SDA (LCD I2C) LCD Data
     │  9  │ enc4 DT  (Osc1 Fine)             │ 17  │ enc18 CLK (Amp Attack)
