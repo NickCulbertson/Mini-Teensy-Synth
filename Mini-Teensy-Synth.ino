@@ -1,11 +1,13 @@
 /*
- * MiniTeensy Synth
+ * MiniTeensy Synth v1.1
  * A 6-voice polyphonic virtual analog synthesizer built with the Teensy 4.1 microcontroller, 
  * inspired by the classic Minimoog. Features comprehensive synthesis with USB audio/MIDI 
  * and intuitive menu control.
  * 
  * REQUIRED LIBRARIES (install via Arduino Library Manager):
- * - LiquidCrystal I2C (by Frank de Brabander)
+ * - LiquidCrystal I2C (by Frank de Brabander) - for LCD display
+ * - Adafruit SSD1306 (by Adafruit) - for OLED display  
+ * - Adafruit GFX Library (by Adafruit) - for OLED display
  * - Encoder (by Paul Stoffregen) 
  * - MIDI Library (by Francois Best) - only needed if enabling DIN MIDI
  * 
@@ -13,14 +15,28 @@
  * - Audio, Wire, SPI, SD, SerialFlash, USBHost_t36
  */
 
+// Display Selection - Comment out the one you're NOT using. You may need to restart your device after switching displays.
+#define USE_LCD_DISPLAY
+// #define USE_OLED_DISPLAY
+
 #include <USBHost_t36.h>
 #include <Audio.h>
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
 #include <SerialFlash.h>
-#include <LiquidCrystal_I2C.h>
 #include <Encoder.h>
+
+#ifdef USE_LCD_DISPLAY
+  #include <LiquidCrystal_I2C.h>
+#endif
+
+#ifdef USE_OLED_DISPLAY
+  #include <U8g2lib.h>
+  #define OLED_WIDTH 128
+  #define OLED_HEIGHT 32
+  #define OLED_RESET -1
+#endif
 
 // TODO: Test DIN MIDI
 // Uncomment to enable DIN MIDI support (requires moving enc3 from pin 0)
@@ -53,7 +69,8 @@
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 #endif
 
-const int MENU_ENCODER_CLK = 13, MENU_ENCODER_DT = 14, MENU_ENCODER_SW = 15;
+//Changed in v1.1
+const int MENU_ENCODER_SW = 13, MENU_ENCODER_CLK = 14, MENU_ENCODER_DT = 15;
 
 // Encoder definitions
 Encoder enc1(4, 5);
@@ -227,7 +244,14 @@ float currentFreq[VOICES]; // Current frequencies during glide
 bool gliding[VOICES]; // Whether each voice is gliding
 
 // Control system
-LiquidCrystal_I2C lcd(0x27, 16, 2);
+#ifdef USE_LCD_DISPLAY
+  LiquidCrystal_I2C lcd(0x27, 16, 2);
+#endif
+
+#ifdef USE_OLED_DISPLAY
+  U8G2_SH1106_128X64_NONAME_F_HW_I2C display(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
+#endif
+
 int menuIndex = 0;
 bool inMenu = false;
 
@@ -606,13 +630,29 @@ void setup() {
   }
   
   
-  // Initialize LCD
+  // Initialize Display
+  // Add delay to ensure I2C bus is ready after any previous display type
+  delay(100);
+  
+#ifdef USE_LCD_DISPLAY
   lcd.init();
   lcd.backlight();
-  lcd.setCursor(0, 0);
-  lcd.print("MiniTeensy Synth");
-  lcd.setCursor(0, 1);
-  lcd.print("6-Voice Poly");
+  displayText("MiniTeensy Synth", "6-Voice Poly");
+#endif
+
+#ifdef USE_OLED_DISPLAY
+  // Reset I2C bus and ensure clean initialization
+  Wire.begin();
+  delay(50);
+  display.begin();
+  Serial.println("OLED initialized");
+  
+  display.clearBuffer();
+  display.setFont(u8g2_font_8x13_tf);
+  display.drawStr(3, 20, "MiniTeensy Synth");
+  display.drawStr(3, 40, "6-Voice Poly");
+  display.sendBuffer();
+#endif
   
   // Initialize all voice arrays
   for (int v = 0; v < VOICES; v++) {
@@ -1007,18 +1047,16 @@ void updateEncoderParameter(int paramIndex, int change) {
   
   // Update display
   if (!inMenu) {
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print(controlNames[paramIndex]);
-    lcd.setCursor(0, 1);
+    String line1 = controlNames[paramIndex];
+    String line2 = "";
     
     if (paramIndex >= 5 && paramIndex <= 7) { // Waveform controls
       int waveIndex = getWaveformIndex(val, (paramIndex == 5) ? 1 : ((paramIndex == 6) ? 2 : 3));
-      lcd.print(waveformNames[waveIndex]);
+      line2 = waveformNames[waveIndex];
     }
     else if (paramIndex >= 0 && paramIndex <= 2) { // Range controls
       int rangeIndex = getRangeIndex(val);
-      lcd.print(rangeNames[rangeIndex]);
+      line2 = rangeNames[rangeIndex];
     }
     else if (paramIndex == 3 || paramIndex == 4) { // Extended fine tuning controls
       // Calculate display value based on range
@@ -1026,28 +1064,29 @@ void updateEncoderParameter(int paramIndex, int change) {
         // Semitone range (negative)
         float semiRange = val / 0.25;
         int semitones = (int)(-12 + (semiRange * 11)); // -12 to -1
-        lcd.print(semitones);
-        lcd.print("st");
+        line2 = String(semitones) + "st";
       } else if (val >= 0.75) {
         // Semitone range (positive)
         float semiRange = (val - 0.75) / 0.25;
         int semitones = (int)(1 + (semiRange * 11)); // +1 to +12
-        lcd.print("+");
-        lcd.print(semitones);
-        lcd.print("st");
+        line2 = "+" + String(semitones) + "st";
       } else {
         // Cents range (±25 cents)
         int cents = (int)((val - 0.5) * 100); // -25 to +25 cents
-        if (cents >= 0) lcd.print("+");
-        lcd.print(cents);
-        lcd.print("c");
+        if (cents >= 0) {
+          line2 = "+" + String(cents) + "c";
+        } else {
+          line2 = String(cents) + "c";
+        }
       }
     }
     else {
       // Show raw parameter value for other controls
       int displayValue = (int)(val * 127); // 0-127 MIDI scale
-      lcd.print(displayValue);
+      line2 = String(displayValue);
     }
+    
+    displayText(line1, line2);
   }
 }
 
@@ -1800,7 +1839,12 @@ void backMenuAction() {
 
 void handleEncoder() {
   // Use the menuEncoder library object for smooth operation
-  long newMenuValue = menuEncoder.read() / 2; // More sensitive for better menu navigation
+  // Adjust encoder sensitivity based on display type
+#ifdef USE_OLED_DISPLAY
+  long newMenuValue = menuEncoder.read() / 4; // Less sensitive for OLED encoder
+#else
+  long newMenuValue = menuEncoder.read() / 2; // Standard sensitivity for separate encoder
+#endif
   static long oldMenuValue = 0;
   
   
@@ -1873,7 +1917,11 @@ void handleEncoder() {
     } else {
       // Not in menu - handle cutoff control (parameter 11) like other encoders
       // Just read menuEncoder like a regular encoder for cutoff
-      encoderValues[11] = menuEncoder.read() / 2; // More sensitive for cutoff control
+#ifdef USE_OLED_DISPLAY
+      encoderValues[11] = menuEncoder.read() / 4; // Adjusted sensitivity for OLED encoder
+#else
+      encoderValues[11] = menuEncoder.read() / 2; // Standard sensitivity for separate encoder
+#endif
     }
     oldMenuValue = newMenuValue;
   }
@@ -2043,6 +2091,30 @@ void printCurrentPresetValues() {
   Serial.println("Type 'r' in Serial Monitor to reset encoder baselines to current values");
 }
 
+// Display helper functions - String-based approach to prevent crashes
+void displayText(String line1, String line2) {
+#ifdef USE_LCD_DISPLAY
+  lcd.clear();
+  delayMicroseconds(500);
+  lcd.setCursor(0, 0);
+  lcd.print(line1);
+  lcd.setCursor(0, 1);  
+  lcd.print(line2);
+#endif
+
+#ifdef USE_OLED_DISPLAY
+  display.clearBuffer();
+  display.setFont(u8g2_font_8x13_tf);
+  if (line1.length() > 0) {
+    display.drawStr(3, 20, line1.c_str());
+  }
+  if (line2.length() > 0) {
+    display.drawStr(3, 40, line2.c_str());
+  }
+  display.sendBuffer();
+#endif
+}
+
 void updateDisplay() {
   // Throttle display updates to prevent corruption
   static unsigned long lastDisplayUpdate = 0;
@@ -2050,21 +2122,18 @@ void updateDisplay() {
   if (now - lastDisplayUpdate < 25) return; // Limit to 40Hz updates
   lastDisplayUpdate = now;
   
-  lcd.clear();
-  delayMicroseconds(500); // Brief pause after clear to prevent corruption
+  String line1 = "";
+  String line2 = "";
+  
   if (inMenu) {
-    lcd.setCursor(0, 0);
     
     if (inPresetBrowse) {
       // Preset browse mode
-      lcd.print("Presets");
-      lcd.setCursor(0, 1);
+      line1 = "Presets";
       if (presetBrowseIndex == NUM_PRESETS) {
-        lcd.print("< Back");
+        line2 = "< Back";
       } else {
-        lcd.print(presetBrowseIndex + 1);
-        lcd.print(". ");
-        lcd.print(presets[presetBrowseIndex].name);
+        line2 = String(presetBrowseIndex + 1) + ". " + String(presets[presetBrowseIndex].name);
       }
     } else {
       // Regular menu navigation
@@ -2072,223 +2141,180 @@ void updateDisplay() {
       
       switch(currentMenuState) {
         case PARENT_MENU:
-          lcd.print("Menu");
-          lcd.setCursor(0, 1);
-          if (menuIndex == 0) lcd.print("Presets");
-          else if (menuIndex == 1) lcd.print("Oscillator 1");
-          else if (menuIndex == 2) lcd.print("Oscillator 2");
-          else if (menuIndex == 3) lcd.print("Oscillator 3");
-          else if (menuIndex == 4) lcd.print("Noise");
-          else if (menuIndex == 5) lcd.print("Envelopes");
-          else if (menuIndex == 6) lcd.print("Filter");
-          else if (menuIndex == 7) lcd.print("LFO");
-          else if (menuIndex == 8) lcd.print("Voice Mode");
-          else if (menuIndex == 9) lcd.print("Settings");
-          else if (menuIndex == 10) lcd.print("< Exit");
+          line1 = "Menu";
+          if (menuIndex == 0) line2 = "Presets";
+          else if (menuIndex == 1) line2 = "Oscillator 1";
+          else if (menuIndex == 2) line2 = "Oscillator 2";
+          else if (menuIndex == 3) line2 = "Oscillator 3";
+          else if (menuIndex == 4) line2 = "Noise";
+          else if (menuIndex == 5) line2 = "Envelopes";
+          else if (menuIndex == 6) line2 = "Filter";
+          else if (menuIndex == 7) line2 = "LFO";
+          else if (menuIndex == 8) line2 = "Voice Mode";
+          else if (menuIndex == 9) line2 = "Settings";
+          else if (menuIndex == 10) line2 = "< Exit";
           break;
           
           
         case OSC_1:
-          lcd.print("Oscillator 1");
-          lcd.setCursor(0, 1);
-          if (menuIndex == 0) lcd.print("Range");
-          else if (menuIndex == 1) lcd.print("Waveform");
-          else if (menuIndex == 2) lcd.print("Volume");
-          else if (menuIndex == 3) lcd.print("Fine Tune");
-          else if (menuIndex == 4) lcd.print("< Back");
+          line1 = "Oscillator 1";
+          if (menuIndex == 0) line2 = "Range";
+          else if (menuIndex == 1) line2 = "Waveform";
+          else if (menuIndex == 2) line2 = "Volume";
+          else if (menuIndex == 3) line2 = "Fine Tune";
+          else if (menuIndex == 4) line2 = "< Back";
           break;
           
         case OSC_2:
-          lcd.print("Oscillator 2");
-          lcd.setCursor(0, 1);
-          if (menuIndex == 0) lcd.print("Range");
-          else if (menuIndex == 1) lcd.print("Waveform");
-          else if (menuIndex == 2) lcd.print("Volume");
-          else if (menuIndex == 3) lcd.print("Fine Tune");
-          else if (menuIndex == 4) lcd.print("< Back");
+          line1 = "Oscillator 2";
+          if (menuIndex == 0) line2 = "Range";
+          else if (menuIndex == 1) line2 = "Waveform";
+          else if (menuIndex == 2) line2 = "Volume";
+          else if (menuIndex == 3) line2 = "Fine Tune";
+          else if (menuIndex == 4) line2 = "< Back";
           break;
           
         case OSC_3:
-          lcd.print("Oscillator 3");
-          lcd.setCursor(0, 1);
-          if (menuIndex == 0) lcd.print("Range");
-          else if (menuIndex == 1) lcd.print("Waveform");
-          else if (menuIndex == 2) lcd.print("Volume");
-          else if (menuIndex == 3) lcd.print("Fine Tune");
-          else if (menuIndex == 4) lcd.print("< Back");
+          line1 = "Oscillator 3";
+          if (menuIndex == 0) line2 = "Range";
+          else if (menuIndex == 1) line2 = "Waveform";
+          else if (menuIndex == 2) line2 = "Volume";
+          else if (menuIndex == 3) line2 = "Fine Tune";
+          else if (menuIndex == 4) line2 = "< Back";
           break;
           
         case NOISE:
-          lcd.print("Noise");
-          lcd.setCursor(0, 1);
-          if (menuIndex == 0) lcd.print("Volume");
-          else if (menuIndex == 1) lcd.print("Type");
-          else if (menuIndex == 2) lcd.print("< Back");
+          line1 = "Noise";
+          if (menuIndex == 0) line2 = "Volume";
+          else if (menuIndex == 1) line2 = "Type";
+          else if (menuIndex == 2) line2 = "< Back";
           break;
           
         case ENVELOPES:
-          lcd.print("Envelopes");
-          lcd.setCursor(0, 1);
-          if (menuIndex == 0) lcd.print("Amp Attack");
-          else if (menuIndex == 1) lcd.print("Amp Sustain");
-          else if (menuIndex == 2) lcd.print("Amp Decay");
-          else if (menuIndex == 3) lcd.print("Filter Attack");
-          else if (menuIndex == 4) lcd.print("Filter Decay");
-          else if (menuIndex == 5) lcd.print("Filter Sustain");
-          else if (menuIndex == 6) lcd.print("< Back");
+          line1 = "Envelopes";
+          if (menuIndex == 0) line2 = "Amp Attack";
+          else if (menuIndex == 1) line2 = "Amp Sustain";
+          else if (menuIndex == 2) line2 = "Amp Decay";
+          else if (menuIndex == 3) line2 = "Filter Attack";
+          else if (menuIndex == 4) line2 = "Filter Decay";
+          else if (menuIndex == 5) line2 = "Filter Sustain";
+          else if (menuIndex == 6) line2 = "< Back";
           break;
           
         case FILTER:
-          lcd.print("Filter");
-          lcd.setCursor(0, 1);
-          if (menuIndex == 0) lcd.print("Cutoff");
-          else if (menuIndex == 1) lcd.print("Resonance");
-          else if (menuIndex == 2) lcd.print("Strength");
-          else if (menuIndex == 3) lcd.print("< Back");
+          line1 = "Filter";
+          if (menuIndex == 0) line2 = "Cutoff";
+          else if (menuIndex == 1) line2 = "Resonance";
+          else if (menuIndex == 2) line2 = "Strength";
+          else if (menuIndex == 3) line2 = "< Back";
           break;
           
         case LFO:
-          lcd.print("LFO");
-          lcd.setCursor(0, 1);
-          if (menuIndex == 0) lcd.print("Rate");
-          else if (menuIndex == 1) lcd.print("Depth");
-          else if (menuIndex == 2) lcd.print("Toggle");
-          else if (menuIndex == 3) lcd.print("Target");
-          else if (menuIndex == 4) lcd.print("< Back");
+          line1 = "LFO";
+          if (menuIndex == 0) line2 = "Rate";
+          else if (menuIndex == 1) line2 = "Depth";
+          else if (menuIndex == 2) line2 = "Toggle";
+          else if (menuIndex == 3) line2 = "Target";
+          else if (menuIndex == 4) line2 = "< Back";
           break;
           
         case VOICE_MODE:
-          lcd.print("Voice Mode");
-          lcd.setCursor(0, 1);
-          if (menuIndex == 0) lcd.print("Play Mode");
-          else if (menuIndex == 1) lcd.print("Glide Time");
-          else if (menuIndex == 2) lcd.print("< Back");
+          line1 = "Voice Mode";
+          if (menuIndex == 0) line2 = "Play Mode";
+          else if (menuIndex == 1) line2 = "Glide Time";
+          else if (menuIndex == 2) line2 = "< Back";
           break;
           
         case SETTINGS:
-          lcd.print("Settings");
-          lcd.setCursor(0, 1);
-          if (menuIndex == 0) lcd.print("Macro Knobs");
-          else if (menuIndex == 1) lcd.print("MIDI Channel");
-          else if (menuIndex == 2) lcd.print("< Back");
+          line1 = "Settings";
+          if (menuIndex == 0) line2 = "Macro Knobs";
+          else if (menuIndex == 1) line2 = "MIDI Channel";
+          else if (menuIndex == 2) line2 = "< Back";
           break;
           
         case MACRO_KNOBS:
-          lcd.print("Filter Knobs:");
-          lcd.setCursor(0, 1);
-          if (macroMode) {
-            lcd.print("LFO Controls");
-          } else {
-            lcd.print("Filter Env");
-          }
+          line1 = "Filter Knobs:";
+          line2 = macroMode ? "LFO Controls" : "Filter Env";
           break;
           
         case MIDI_CHANNEL:
-          lcd.print("MIDI Channel:");
-          lcd.setCursor(0, 1);
-          if (midiChannel == 0) {
-            lcd.print("Omni");
-          } else {
-            lcd.print(midiChannel);
-          }
+          line1 = "MIDI Channel:";
+          line2 = (midiChannel == 0) ? "Omni" : String(midiChannel);
           break;
           
         default:
-          // Parameter editing
-          int paramIndex = getParameterIndex(currentMenuState);
-          if (paramIndex >= 0) {
-            lcd.print(controlNames[paramIndex]);
-            lcd.setCursor(0, 1);
-            // Always show current value (no "Click to edit" screen)
-            if (paramIndex == 3 || paramIndex == 4 || paramIndex == 20) { // Extended fine tuning
-              float val = allParameterValues[paramIndex];
-              if (val <= 0.25) {
-                // Semitone range (negative)
-                float semiRange = val / 0.25;
-                int semitones = (int)(-12 + (semiRange * 11)); // -12 to -1
-                lcd.print(semitones);
-                lcd.print("st");
-              } else if (val >= 0.75) {
-                // Semitone range (positive)
-                float semiRange = (val - 0.75) / 0.25;
-                int semitones = (int)(1 + (semiRange * 11)); // +1 to +12
-                lcd.print("+");
-                lcd.print(semitones);
-                lcd.print("st");
+          {
+            // Parameter editing
+            int paramIndex = getParameterIndex(currentMenuState);
+            if (paramIndex >= 0) {
+              line1 = controlNames[paramIndex];
+              
+              // Always show current value (no "Click to edit" screen)
+              if (paramIndex == 3 || paramIndex == 4 || paramIndex == 20) { // Extended fine tuning
+                float val = allParameterValues[paramIndex];
+                if (val <= 0.25) {
+                  // Semitone range (negative)
+                  float semiRange = val / 0.25;
+                  int semitones = (int)(-12 + (semiRange * 11)); // -12 to -1
+                  line2 = String(semitones) + "st";
+                } else if (val >= 0.75) {
+                  // Semitone range (positive)
+                  float semiRange = (val - 0.75) / 0.25;
+                  int semitones = (int)(1 + (semiRange * 11)); // +1 to +12
+                  line2 = "+" + String(semitones) + "st";
+                } else {
+                  // Cents range (±25 cents)
+                  int cents = (int)((val - 0.5) * 100); // -25 to +25 cents
+                  line2 = (cents >= 0 ? "+" : "") + String(cents) + "c";
+                }
+              } else if (paramIndex == 22) { // LFO Rate
+                float rate = 0.1 + allParameterValues[paramIndex] * 19.9;
+                line2 = String(rate, 1) + " Hz";
+              } else if (paramIndex == 23) { // LFO Depth
+                int depth = (int)(allParameterValues[paramIndex] * 100);
+                line2 = String(depth) + "%";
+              } else if (paramIndex == 24) { // LFO Toggle
+                line2 = lfoEnabled ? "ON" : "OFF"; // Use actual variable instead of parameter
+              } else if (paramIndex == 25) { // LFO Target
+                if (lfoTarget == 0) line2 = "Pitch";
+                else if (lfoTarget == 1) line2 = "Filter";
+                else line2 = "Amp";
+              } else if (paramIndex == 26) { // Play Mode
+                if (playMode == 0) line2 = "Mono";
+                else if (playMode == 1) line2 = "Poly";
+                else line2 = "Legato";
+              } else if (paramIndex == 27) { // Glide Time
+                if (glideTime == 0.0) {
+                  line2 = "OFF";
+                } else {
+                  float timeMs = 50 + (glideTime * 950); // 50ms to 1000ms
+                  line2 = String((int)timeMs) + "ms";
+                }
+              } else if (paramIndex == 28) { // Noise Type
+                line2 = (noiseType == 0) ? "White" : "Pink";
+              } else if (paramIndex == 29) { // Macro Mode
+                line2 = macroMode ? "LFO Controls" : "Filter Env";
+              } else if (paramIndex == 30) { // MIDI Channel
+                line2 = (midiChannel == 0) ? "Omni" : String(midiChannel);
               } else {
-                // Cents range (±25 cents)
-                int cents = (int)((val - 0.5) * 100); // -25 to +25 cents
-                if (cents >= 0) lcd.print("+");
-                lcd.print(cents);
-                lcd.print("c");
+                // Show 0-127 values (MIDI standard)
+                int displayValue = (int)(allParameterValues[paramIndex] * 127);
+                line2 = String(displayValue);
               }
-            } else if (paramIndex == 22) { // LFO Rate
-              float rate = 0.1 + allParameterValues[paramIndex] * 19.9;
-              lcd.print(rate, 1);
-              lcd.print(" Hz");
-            } else if (paramIndex == 23) { // LFO Depth
-              int depth = (int)(allParameterValues[paramIndex] * 100);
-              lcd.print(depth);
-              lcd.print("%");
-            } else if (paramIndex == 24) { // LFO Toggle
-              lcd.print(lfoEnabled ? "ON" : "OFF"); // Use actual variable instead of parameter
-            } else if (paramIndex == 25) { // LFO Target
-              if (lfoTarget == 0) lcd.print("Pitch");
-              else if (lfoTarget == 1) lcd.print("Filter");
-              else lcd.print("Amp");
-            } else if (paramIndex == 26) { // Play Mode
-              if (playMode == 0) lcd.print("Mono");
-              else if (playMode == 1) lcd.print("Poly");
-              else lcd.print("Legato");
-            } else if (paramIndex == 27) { // Glide Time
-              if (glideTime == 0.0) {
-                lcd.print("OFF");
-              } else {
-                float timeMs = 50 + (glideTime * 950); // 50ms to 1000ms
-                lcd.print((int)timeMs);
-                lcd.print("ms");
-              }
-            } else if (paramIndex == 28) { // Noise Type
-              if (noiseType == 0) {
-                lcd.print("White");
-              } else {
-                lcd.print("Pink");
-              }
-            } else if (paramIndex == 29) { // Macro Mode
-              lcd.print(macroMode ? "LFO Controls" : "Filter Env");
-            } else if (paramIndex == 30) { // MIDI Channel
-              if (midiChannel == 0) {
-                lcd.print("Omni");
-              } else {
-                lcd.print(midiChannel);
-              }
-            } else {
-              // Show 0-127 values (MIDI standard)
-              int displayValue = (int)(allParameterValues[paramIndex] * 127);
-              lcd.print(displayValue);
+              
+              // line1 and line2 will be displayed by the function's final displayText call
             }
           }
           break;
       }
     }
   } else {
-    lcd.setCursor(0, 0);
-    lcd.print("MiniTeensy");
-    lcd.setCursor(0, 1);
-    
-    // Count active voices
-    int activeVoices = 0;
-    for (int v = 0; v < VOICES; v++) {
-      if (voices[v].active) activeVoices++;
-    }
-    
-    if (activeVoices > 0) {
-      lcd.print("Voices: ");
-      lcd.print(activeVoices);
-    } else {
-      lcd.print("Press for menu");
-    }
+    line1 = "MiniTeensy";
+    line2 = "Press for menu";
   }
+  
+  // Display the two lines
+  displayText(line1, line2);
 }
 
 void loop() {

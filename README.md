@@ -21,6 +21,18 @@ Video: [**DIY Minimoog Inspired Synth | A Teensy Powered Tribute**](https://yout
 - **20 Presets** - 80s Brass, Saw Keys, Bass sounds, Pads, and more
 - **Multiple play modes** - Mono, Poly, Legato with glide
 
+## Recent Updates
+
+### ⚠️ v1.1 - BREAKING CHANGE (December 2025)
+**Menu encoder pin assignments changed** to fix encoder timing issues:
+- **Menu Encoder CLK**: Pin 13 → **Pin 14**
+- **Menu Encoder DT**: Pin 14 → **Pin 15**  
+- **Menu Encoder SW**: Pin 15 → **Pin 13**
+
+**For existing builds:** Swap CLK wire from pin 13 to pin 14, and SW wire from pin 15 to pin 13.
+
+**Need the old version?** Use [v1.0 release](../../releases/tag/v1.0) for original pin assignments.
+
 ## Hardware Requirements
 
 **Full Build:**
@@ -59,9 +71,9 @@ Video: [**DIY Minimoog Inspired Synth | A Teensy Powered Tribute**](https://yout
     │  8  │ enc4 CLK (Osc1 Fine)             │ 18  │ SDA (LCD I2C) LCD Data
     │  9  │ enc4 DT  (Osc1 Fine)             │ 17  │ enc18 CLK (Amp Attack)
     │ 10  │ enc8 CLK (Osc3 Wave)             │ 16  │ enc18 DT  (Amp Attack)
-    │ 11  │ enc8 DT  (Osc3 Wave)             │ 15  │ Menu Encoder SW (Push Button)
-    │ 12  │ enc7 CLK (Osc2 Wave)             │ 14  │ Menu Encoder DT (Filter Cutoff when not in menu)
-    └─────┘                                  │ 13  │ Menu Encoder CLK  (Filter Cutoff when not in menu)
+    │ 11  │ enc8 DT  (Osc3 Wave)             │ 15  │ Menu Encoder DT (Filter Cutoff when not in menu)
+    │ 12  │ enc7 CLK (Osc2 Wave)             │ 14  │ Menu Encoder CLK (Filter Cutoff when not in menu)
+    └─────┘                                  │ 13  │ Menu Encoder SW (Push Button)
                                              └─────┘
     │ 24  │ enc7 DT  (Osc2 Wave)             │ 41  │ enc14 DT  (Filter Attack/LFO Rate)
     │ 25  │ enc6 CLK (Osc1 Wave)             │ 40  │ enc20 CLK (Amp Sustain)
@@ -86,9 +98,9 @@ Perfect for testing or easier builds:
 ```
 Menu Encoder Pin    →  Teensy 4.1 Pin    │  Function
 ─────────────────────────────────────────┼─────────────
-CLK                 →  13                │  Rotary Clock
-DT                  →  14                │  Rotary Data  
-SW (Push Button)    →  15                │  Menu Select
+SW (Push Button)    →  13                │  Menu Select
+CLK                 →  14                │  Rotary Clock
+DT                  →  15                │  Rotary Data  
 VCC                 →  3.3V              │  Power (3.3V)
 GND                 →  GND               │  Ground
 ```
@@ -125,7 +137,7 @@ Osc3 Waveform       │  enc8   │   10    │   11    │ Triangle, Sawtooth, 
 Osc1 Volume         │  enc9   │   29    │   30    │ Mixer level control
 Osc2 Volume         │ enc10   │   28    │   26    │ Mixer level control  
 Osc3 Volume         │ enc11   │   21    │   20    │ Mixer level control
-Menu Navigation     │ menu    │   13    │   14    │ Main interface (SW→15) / Filter Cutoff when not in menu
+Menu Navigation     │ menu    │   14    │   15    │ Main interface (SW→13) / Filter Cutoff when not in menu
 Filter Resonance    │ enc13   │   34    │   33    │ Resonance Q factor
 Filter Envelope Amt │ enc14   │   50    │   41    │ Attack / LFO Rate*
 Filter Decay        │ enc15   │   23    │   22    │ Decay / LFO Depth*
