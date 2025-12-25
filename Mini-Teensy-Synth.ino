@@ -12,19 +12,22 @@
  * - MIDI Library (by Francois Best) - only needed if enabling DIN MIDI
  * 
  * Built-in Teensy libraries (no installation needed):
- * - Audio, Wire, SPI, SD, SerialFlash, USBHost_t36
+ * - Audio, Wire, USBHost_t36
  */
 
-// Display Selection - Comment out the one you're NOT using. You may need to restart your device after switching displays.
-#define USE_LCD_DISPLAY
-// #define USE_OLED_DISPLAY
+#define NUM_PARAMETERS 31
+#define NUM_PRESETS 20
+#define VOICES 6
+
+#include "config.h"
+#include "MenuNavigation.h"
+
+const char* PROJECT_NAME = "MiniTeensy Synth";
+const char* PROJECT_SUBTITLE = "6-Voice Poly";
 
 #include <USBHost_t36.h>
 #include <Audio.h>
 #include <Wire.h>
-#include <SPI.h>
-#include <SD.h>
-#include <SerialFlash.h>
 #include <Encoder.h>
 
 #ifdef USE_LCD_DISPLAY
@@ -38,41 +41,11 @@
   #define OLED_RESET -1
 #endif
 
-// TODO: Test DIN MIDI
-// Uncomment to enable DIN MIDI support (requires moving enc3 from pin 0)
-// #define ENABLE_DIN_MIDI
-
-/*
- * DIN MIDI Setup Instructions:
- * 
- * HARDWARE REQUIRED:
- * - 6N138 optocoupler IC
- * - 220Ω resistor  
- * - 5-pin DIN MIDI connector
- * - Standard MIDI interface circuit (see MIDI specification)
- * 
- * WIRING:
- * 1. Build MIDI input circuit: DIN connector → 6N138 optocoupler → 220Ω resistor
- * 2. Connect MIDI circuit output to Teensy Serial1 RX (Pin 0)
- * 3. IMPORTANT: Move enc3 (Osc3 Range) CLK wire from Pin 0 to surface mount pin (42-47)
- * 
- * USAGE:
- * - Install "MIDI Library" by Francois Best via Arduino Library Manager
- * - Uncomment #define ENABLE_DIN_MIDI above
- * - Supports both USB and DIN MIDI simultaneously
- * - Uses same MIDI channel setting from Settings menu
- * - Receives Note On/Off, Control Change, and Pitch Bend
- */
-
 #ifdef ENABLE_DIN_MIDI
 #include <MIDI.h>
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 #endif
 
-//Changed in v1.1
-const int MENU_ENCODER_SW = 13, MENU_ENCODER_CLK = 14, MENU_ENCODER_DT = 15;
-
-// Encoder definitions
 Encoder enc1(4, 5);
 Encoder enc2(2, 3);
 Encoder enc3(0, 1);
@@ -97,7 +70,7 @@ Encoder menuEncoder(MENU_ENCODER_DT, MENU_ENCODER_CLK);
 long encoderValues[20] = {0};
 long lastEncoderValues[20] = {0};
 // Default parameter values - matches "Init" preset
-float allParameterValues[31] = {
+float allParameterValues[NUM_PARAMETERS] = {
   0.417, 0.417, 0.417, 0.500, 0.500, 0.417, 0.417, 0.417, 0.789, 0.789,
   0.789, 1.000, 0.000, 0.000, 0.160, 1.000, 0.000, 0.000, 1.000, 0.016,
   0.500, 1.000, 0.250, 0.000, 0.000, 0.330, 0.330, 0.000, 0.000, 0.000,
@@ -105,7 +78,6 @@ float allParameterValues[31] = {
 };
 
 // Audio synthesis
-const int VOICES = 6;
 AudioSynthWaveform       osc1[VOICES], osc2[VOICES], osc3[VOICES];
 AudioSynthNoiseWhite     noise1;        // White noise source
 AudioSynthNoisePink      noisePink;    // Pink noise source
@@ -116,7 +88,6 @@ AudioMixer4              oscMix[VOICES]; // Mix 3 oscs + noise per voice
 AudioFilterLadder        filter1[VOICES]; // Filter per voice
 AudioEffectEnvelope      ampEnv[VOICES], filtEnv[VOICES]; // Envelopes per voice
 AudioMixer4              voiceMix1, voiceMix2, finalMix; // Mix voices together
-// AudioOutputI2S           i2s1;
 AudioOutputUSB           usb1;
 
 // Audio connections - Polyphonic chain
@@ -204,7 +175,6 @@ AudioConnection patchCordOut2(finalMix, 0, usb1, 1);
 // AudioControlSGTL5000     sgt15000_1;
 
 // ===== SYNTH PARAMETERS =====
-// Polyphonic voice state
 struct PolyVoice {
   int note;
   bool active;
@@ -266,145 +236,12 @@ const char* controlNames[] = {
 
 bool macroMode = false;
 
-// Preset system
-struct MiniTeensyPreset {
-  const char* name;
-  float parameters[29]; // All 29 parameter values (0.0 to 1.0)
-};
-
-// Define 12 classic analog synth presets (iconic synth sounds + blanks for expansion)
-// Parameter mapping: 0-2:Osc1-3Range, 
-// 3-4:Osc2-3Fine,
-// 5-7:Osc1-3Wave,
-// 8-10:Osc1-3Vol,
-// 11:Cutoff,
-// 12:Resonance,
-// 13-15:FilterADSR,
-// 16:Noise,
-// 17-19:AmpADSR,
-// 20:Osc1Fine,
-// 21:FilterStrength
-const MiniTeensyPreset presets[] = {
-  {"80s Brass", {0.417, 0.417, 0.417, 0.539, 0.445, 0.417, 0.417, 0.417, 1.000, 0.789, 0.594, 0.562, 0.023, 0.039, 0.160, 0.000, 0.000, 0.000, 1.000, 0.026, 0.500, 1.000, 0.250, 0.000, 0.000, 0.330, 0.330, 0.000}},
-  {"Saw Keys", {0.417, 0.417, 0.417, 0.453, 0.539, 0.417, 0.417, 0.250, 0.695, 0.789, 0.789, 0.633, 0.039, 0.000, 0.097, 0.469, 0.000, 0.000, 1.000, 0.039, 0.500, 1.000, 0.250, 0.000, 0.000, 0.330, 0.580, 0.000}},
-  {"Square Keys", {0.417, 0.250, 0.417, 0.453, 0.547, 0.583, 0.917, 0.750, 0.789, 0.789, 0.789, 0.633, 0.008, 0.000, 0.113, 0.000, 0.000, 0.000, 0.448, 0.039, 0.500, 1.000, 0.008, 0.023, 1.000, 0.040, 0.330, 0.000}},
-  {"8-Bit Square", {0.417, 0.417, 0.417, 0.500, 0.500, 0.583, 0.417, 0.417, 0.789, 0.000, 0.000, 0.852, 0.000, 0.000, 0.160, 1.000, 0.000, 0.000, 1.000, 0.000, 0.500, 1.000, 0.250, 0.000, 0.000, 0.330, 1.000, 0.000}},
-  {"Butter Supersaw", {0.417, 0.417, 0.417, 0.547, 0.453, 0.417, 0.417, 0.417, 0.594, 0.789, 0.789, 0.609, 0.016, 0.000, 0.238, 0.437, 0.020, 0.000, 1.000, 0.008, 0.500, 1.000, 0.008, 0.016, 1.000, 0.330, 0.330, 0.000}},
-  {"West Coast Lead", {0.250, 0.417, 0.417, 0.477, 0.523, 0.417, 0.417, 0.250, 0.000, 1.000, 1.000, 0.711, 0.000, 0.000, 0.238, 1.000, 0.000, 0.000, 1.000, 0.000, 0.500, 1.000, 0.250, 0.000, 0.000, 0.330, 0.930, 0.000}},
-  {"Teensy Lead", {0.250, 0.417, 0.417, 0.477, 0.523, 0.583, 0.583, 0.750, 0.000, 1.000, 1.000, 0.633, 0.000, 0.000, 0.238, 1.000, 0.000, 0.000, 1.000, 0.000, 0.500, 1.000, 0.250, 0.000, 1.000, 0.150, 0.930, 0.711}},
-  {"Analog Bass", {0.417, 0.417, 0.250, 0.531, 0.484, 0.417, 0.417, 0.583, 1.000, 1.000, 1.000, 0.617, 0.047, 0.000, 0.019, 0.000, 0.000, 0.000, 1.000, 0.000, 0.500, 1.000, 0.016, 0.055, 1.000, 0.330, 0.280, 0.812}},
-  {"Legato Bass", {0.250, 0.417, 0.417, 0.477, 0.523, 0.583, 0.417, 0.250, 0.953, 1.000, 1.000, 0.711, 0.023, 0.000, 0.160, 0.633, 0.000, 0.000, 1.000, 0.000, 0.500, 1.000, 0.250, 0.000, 0.000, 0.330, 1.000, 1.000}},
-  {"Funk Bass", {0.250, 0.417, 0.417, 0.539, 0.461, 0.583, 0.417, 0.250, 1.000, 1.000, 1.000, 0.516, 0.172, 0.000, 0.066, 0.000, 0.000, 0.000, 0.828, 0.002, 0.500, 1.000, 0.250, 0.000, 0.000, 0.330, 0.230, 0.000}},
-  {"8-Bit Harp", {0.750, 0.417, 0.750, 0.523, 0.445, 0.583, 0.750, 0.417, 1.000, 1.000, 0.508, 0.664, 0.000, 0.000, 0.051, 0.000, 0.050, 0.000, 0.000, 0.253, 0.500, 1.000, 0.250, 0.000, 0.000, 0.330, 0.330, 0.000}},
-  {"Love Pad", {0.417, 0.417, 0.417, 0.414, 0.562, 0.417, 0.417, 0.417, 0.789, 0.789, 0.789, 0.609, 0.109, 0.148, 0.504, 0.000, 0.240, 0.070, 0.863, 0.206, 0.500, 0.250, 0.008, 0.023, 1.000, 0.040, 0.330, 0.000}},
-  {"Thoughtful Pad", {0.750, 0.417, 0.250, 0.484, 0.539, 0.583, 0.417, 0.083, 0.227, 0.797, 0.750, 0.445, 0.195, 0.508, 1.000, 0.000, 0.290, 0.141, 1.000, 0.227, 0.500, 1.000, 0.250, 0.000, 0.000, 0.330, 0.580, 0.000}},
-  {"Saw Pad", {0.417, 0.417, 0.417, 0.578, 0.453, 0.417, 0.417, 0.250, 0.789, 0.789, 0.789, 0.508, 0.023, 0.187, 0.371, 0.508, 0.100, 0.047, 0.820, 0.320, 0.500, 1.000, 0.250, 0.000, 0.000, 0.330, 0.330, 0.000}},
-  {"5th Pad", {0.500, 0.500, 0.500, 0.895, 0.536, 0.417, 0.417, 0.417, 0.750, 0.750, 0.780, 0.590, 0.060, 0.113, 0.270, 0.230, 0.000, 0.000, 0.800, 0.018, 0.500, 0.500, 0.250, 0.000, 0.000, 0.330, 0.330, 0.000}},
-  {"Classic Sweep", {0.417, 0.417, 0.417, 0.578, 0.453, 0.417, 0.417, 0.250, 0.789, 0.789, 0.789, 0.453, 0.312, 0.031, 1.000, 0.000, 0.490, 0.000, 1.000, 0.031, 0.500, 1.000, 0.250, 0.000, 0.000, 0.330, 0.330, 0.000}},
-  {"Haunted Organ", {0.417, 0.583, 0.750, 0.476, 0.523, 0.083, 0.083, 0.083, 0.766, 0.594, 0.578, 0.516, 0.000, 0.000, 0.019, 0.625, 0.110, 0.000, 0.687, 0.018, 0.500, 1.000, 0.016, 0.039, 1.000, 0.210, 0.330, 0.000}},
-  {"Synth Drum", {0.417, 0.583, 0.250, 0.891, 0.445, 0.083, 0.083, 0.583, 0.117, 0.047, 0.016, 0.422, 0.093, 0.000, 0.016, 0.000, 1.000, 0.000, 0.000, 0.026, 0.500, 1.000, 0.250, 0.000, 0.000, 0.330, 0.330, 0.000}},
-  {"Noise-scape", {0.417, 0.417, 0.417, 0.539, 0.445, 0.417, 0.417, 0.417, 0.000, 0.000, 0.000, 0.203, 0.273, 0.000, 0.555, 1.000, 1.000, 0.187, 1.000, 0.253, 0.500, 1.000, 0.250, 0.000, 0.000, 0.330, 0.330, 0.000}},
-  {"Init", {0.417, 0.417, 0.417, 0.500, 0.500, 0.417, 0.417, 0.417, 0.789, 0.789, 0.789, 1.000, 0.000, 0.000, 0.160, 1.000, 0.000, 0.000, 1.000, 0.016, 0.500, 1.000, 0.250, 0.000, 0.000, 0.330, 0.330, 0.000}}
-};
-
-const int NUM_PRESETS = sizeof(presets) / sizeof(presets[0]); // Dynamic based on presets array
+extern const MiniTeensyPreset presets[];
 int currentPreset = 0;
-
-// Hierarchical menu system like TeensySynthesizer
-enum MenuState {
-  PARENT_MENU,
-  OSC_1,
-  OSC_2, 
-  OSC_3,
-  NOISE,
-  ENVELOPES,
-  FILTER,
-  LFO,
-  VOICE_MODE,
-  // Oscillator 1 sub-menus
-  OSC1_RANGE,
-  OSC1_WAVE,
-  OSC1_VOLUME,
-  OSC1_FINE,
-  // Oscillator 2 sub-menus  
-  OSC2_RANGE,
-  OSC2_WAVE,
-  OSC2_VOLUME,
-  OSC2_FINE,
-  // Oscillator 3 sub-menus
-  OSC3_RANGE,
-  OSC3_WAVE,
-  OSC3_VOLUME,
-  OSC3_FINE,
-  // Noise sub-menu
-  NOISE_VOLUME,
-  // Envelope sub-menus
-  AMP_ATTACK,
-  AMP_SUSTAIN,
-  AMP_DECAY,
-  FILTER_ATTACK,
-  FILTER_DECAY,
-  FILTER_SUSTAIN,
-  // Filter sub-menus
-  CUTOFF,
-  RESONANCE,
-  FILTER_STRENGTH,
-  // LFO sub-menus
-  LFO_RATE,
-  LFO_DEPTH,
-  LFO_TOGGLE,
-  LFO_TARGET,
-  // Voice Mode sub-menus
-  PLAY_MODE,
-  GLIDE_TIME,
-  NOISE_TYPE,
-  // Settings sub-menus
-  SETTINGS,
-  MACRO_KNOBS,
-  MIDI_CHANNEL
-};
 
 MenuState currentMenuState = PARENT_MENU;
 bool inPresetBrowse = false; // When browsing individual presets
 int presetBrowseIndex = 0; // Which preset we're browsing
-
-// Map menu states to parameter indices
-int getParameterIndex(MenuState state) {
-  switch(state) {
-    case OSC1_RANGE: return 0;
-    case OSC2_RANGE: return 1;
-    case OSC3_RANGE: return 2;
-    case OSC2_FINE: return 3;
-    case OSC3_FINE: return 4;
-    case OSC1_WAVE: return 5;
-    case OSC2_WAVE: return 6;
-    case OSC3_WAVE: return 7;
-    case OSC1_VOLUME: return 8;
-    case OSC2_VOLUME: return 9;
-    case OSC3_VOLUME: return 10;
-    case CUTOFF: return 11;
-    case RESONANCE: return 12;
-    case FILTER_ATTACK: return 13;
-    case FILTER_DECAY: return 14;
-    case FILTER_SUSTAIN: return 15;
-    case NOISE_VOLUME: return 16;
-    case AMP_ATTACK: return 17;
-    case AMP_SUSTAIN: return 18;
-    case AMP_DECAY: return 19;
-    case OSC1_FINE: return 20;  // New menu-only parameter
-    case FILTER_STRENGTH: return 21;  // New menu-only parameter
-    case LFO_RATE: return 22;
-    case LFO_DEPTH: return 23;
-    case LFO_TOGGLE: return 24;
-    case LFO_TARGET: return 25;
-    case PLAY_MODE: return 26;
-    case GLIDE_TIME: return 27;
-    case NOISE_TYPE: return 28;
-    case MACRO_KNOBS: return 29;
-    case MIDI_CHANNEL: return 30;
-    default: return -1;
-  }
-}
 
 // Waveform names for display
 const char* waveformNames[] = {
@@ -595,8 +432,6 @@ void setup() {
   Serial.begin(9600);
   AudioMemory(48); // Reduced from 60 to minimize latency
   
-  // USB Device MIDI is automatically initialized
-  
 #ifdef ENABLE_DIN_MIDI
   // Initialize DIN MIDI
   MIDI.begin(MIDI_CHANNEL_OMNI);
@@ -606,16 +441,10 @@ void setup() {
   MIDI.setHandlePitchBend(OnPitchBend);
 #endif
   
-  // Initialize Audio
-  
   // Initialize LFO
   lfo.frequency(lfoRate);
-  lfo.amplitude(1.0); // Full amplitude - we'll control depth in software
+  lfo.amplitude(1.0);
   
-  
-  // Other encoders work fine, only menu encoder needs explicit setup
-  
-  // Menu encoder setup - let Encoder library handle pin modes like other encoders
   pinMode(MENU_ENCODER_SW, INPUT_PULLUP);
   
   // Initialize encoder values
@@ -629,19 +458,15 @@ void setup() {
     updateSynthParameter(i, allParameterValues[i]);
   }
   
-  
-  // Initialize Display
-  // Add delay to ensure I2C bus is ready after any previous display type
   delay(100);
   
 #ifdef USE_LCD_DISPLAY
   lcd.init();
   lcd.backlight();
-  displayText("MiniTeensy Synth", "6-Voice Poly");
+  displayText(PROJECT_NAME, PROJECT_SUBTITLE);
 #endif
 
 #ifdef USE_OLED_DISPLAY
-  // Reset I2C bus and ensure clean initialization
   Wire.begin();
   delay(50);
   display.begin();
@@ -649,8 +474,8 @@ void setup() {
   
   display.clearBuffer();
   display.setFont(u8g2_font_8x13_tf);
-  display.drawStr(3, 20, "MiniTeensy Synth");
-  display.drawStr(3, 40, "6-Voice Poly");
+  display.drawStr(3, 20, PROJECT_NAME);
+  display.drawStr(3, 40, PROJECT_SUBTITLE);
   display.sendBuffer();
 #endif
   
@@ -702,10 +527,8 @@ void setup() {
     gliding[v] = false;
   }
   
-  // Configure noise (shared across all voices)
   noise1.amplitude(0.5); // Reduced noise amplitude
   noisePink.amplitude(0.5); // Pink noise amplitude
-  // Initialize noise mixer - start with white noise
   noiseMix.gain(0, 1.0); // White noise
   noiseMix.gain(1, 0.0); // Pink noise off initially
   
@@ -725,18 +548,14 @@ void setup() {
   finalMix.gain(1, 0.6); // Reduced master output gain
   finalMix.gain(2, 0.0);
   finalMix.gain(3, 0.0);
-  
-  // Control values already initialized above
-  
+    
 // sgt15000_1.enable();
 //     sgt15000_1.volume(1);
 
   delay(2000);
   updateDisplay();
-  Serial.println("Monophonic MiniTeensy Synthesizer Ready!");
-
-
-    
+  Serial.print(PROJECT_NAME);
+  Serial.println(" Ready!");
 }
 
 
@@ -844,27 +663,27 @@ void updateSynthParameter(int paramIndex, float val) {
       break;}
     case 5: // Osc1 Wave
       osc1Wave = getMiniTeensyWaveform(val, 1);
-      updateWaveforms();
+      for (int v = 0; v < VOICES; v++) osc1[v].begin(osc1Wave);
       break;
     case 6: // Osc2 Wave
       osc2Wave = getMiniTeensyWaveform(val, 2);
-      updateWaveforms();
+      for (int v = 0; v < VOICES; v++) osc2[v].begin(osc2Wave);
       break;
     case 7: // Osc3 Wave
       osc3Wave = getMiniTeensyWaveform(val, 3);
-      updateWaveforms();
+      for (int v = 0; v < VOICES; v++) osc3[v].begin(osc3Wave);
       break;
     case 8: // Volume 1
       vol1 = val * 0.8; // Increased gain from 0.4 to 0.8
-      updateMixerLevels();
+      for (int v = 0; v < VOICES; v++) oscMix[v].gain(0, vol1);
       break;
     case 9: // Volume 2
       vol2 = val * 0.8; // Increased gain from 0.4 to 0.8
-      updateMixerLevels();
+      for (int v = 0; v < VOICES; v++) oscMix[v].gain(1, vol2);
       break;
     case 10: // Volume 3
       vol3 = val * 0.8; // Increased gain from 0.4 to 0.8
-      updateMixerLevels();
+      for (int v = 0; v < VOICES; v++) oscMix[v].gain(2, vol3);
       break;
     case 11: // Cutoff
       // Logarithmic frequency response like analog synth (20Hz to 20kHz)
@@ -893,7 +712,7 @@ void updateSynthParameter(int paramIndex, float val) {
       break;
     case 16: // Noise Volume (menu-only)
       noiseVol = val * 0.6; // Increased gain from 0.3 to 0.6
-      updateNoiseLevel();
+      for (int v = 0; v < VOICES; v++) oscMix[v].gain(3, noiseVol);
       break;
     case 17: // Amp Attack (menu-only)
       ampAttack = 1 + val * 3000;
@@ -974,122 +793,6 @@ void updateSynthParameter(int paramIndex, float val) {
   }
 }
 
-// Menu-based parameter update function
-void updateParameterFromMenu(int paramIndex, float val) {
-  updateSynthParameter(paramIndex, val);
-  
-  // Update display for real-time feedback
-  updateDisplay();
-}
-
-// Encoder-based parameter update function  
-void updateEncoderParameter(int paramIndex, int change) {
-  // Different increments for different parameter types
-  float increment = 0.01; // Base increment
-  
-  switch (paramIndex) {
-    case 0: case 1: case 2: // Range controls - discrete steps
-      increment = 0.16; // 6 ranges
-      break;
-    case 3: case 4: // Fine tuning controls - 128 steps (enc4, enc5 /4)
-      increment = 1.0/128.0; // = 0.0078125 - exact 128-step resolution
-      break;
-    case 5: case 6: case 7: // Waveform controls - discrete steps
-      increment = 0.16; // 6 waveforms
-      break;
-    case 8: case 9: case 10: // Volume controls - 128 steps (enc9, enc10, enc11 /4)
-      increment = 1.0/128.0; // = 0.0078125 - exact 128-step resolution
-      break;
-    case 11: // Filter cutoff - consistent 128-step feel (menuEncoder /2)
-      increment = 1.0/128.0; // = 0.0078125 - consistent with all other controls
-      break;
-    case 12: // Filter resonance - optimized for 128 steps (enc13 /4) 
-      increment = 1.0/128.0; // = 0.0078125 - exact 128-step resolution
-      break;
-    case 13: case 14: case 15: case 17: case 18: case 19: // Envelope controls - 128 steps (enc14-enc20 /4)
-      increment = 1.0/128.0; // = 0.0078125 - exact 128-step resolution
-      break;
-    case 24: case 25: case 26: case 28: case 29: case 30: // Toggle/discrete controls (LFO Toggle, LFO Target, Play Mode, Noise Type, Macro Mode, MIDI Channel)
-      increment = 0.5; // Large steps for immediate toggle response
-      break;
-    default:
-      increment = 0.01; // Standard increment
-      break;
-  }
-  
-  // Update the global parameter array
-  allParameterValues[paramIndex] = constrain(allParameterValues[paramIndex] + (change * increment), 0.0, 1.0);
-  float val = allParameterValues[paramIndex];
-  
-  // Snap discrete controls to exact threshold values
-  if (paramIndex >= 0 && paramIndex <= 2) { // Range controls
-    if (val < 0.167) val = 0.083;        // 32' center
-    else if (val < 0.333) val = 0.25;    // 16' center  
-    else if (val < 0.5) val = 0.417;     // 8' center
-    else if (val < 0.667) val = 0.583;   // 4' center
-    else if (val < 0.833) val = 0.75;    // 2' center
-    else val = 0.917;                    // LO center
-    allParameterValues[paramIndex] = val; // Store snapped value
-  } 
-  else if (paramIndex >= 5 && paramIndex <= 7) { // Waveform controls
-    if (val < 0.167) val = 0.083;        // Triangle center
-    else if (val < 0.333) val = 0.25;    // Reverse Saw center
-    else if (val < 0.5) val = 0.417;     // Sawtooth center  
-    else if (val < 0.667) val = 0.583;   // Square center
-    else if (val < 0.833) val = 0.75;    // Pulse center
-    else val = 0.917;                    // Pulse center
-    allParameterValues[paramIndex] = val; // Store snapped value
-  }
-  
-  
-  // Update the synthesis parameter
-  updateSynthParameter(paramIndex, val);
-  
-  // Update display
-  if (!inMenu) {
-    String line1 = controlNames[paramIndex];
-    String line2 = "";
-    
-    if (paramIndex >= 5 && paramIndex <= 7) { // Waveform controls
-      int waveIndex = getWaveformIndex(val, (paramIndex == 5) ? 1 : ((paramIndex == 6) ? 2 : 3));
-      line2 = waveformNames[waveIndex];
-    }
-    else if (paramIndex >= 0 && paramIndex <= 2) { // Range controls
-      int rangeIndex = getRangeIndex(val);
-      line2 = rangeNames[rangeIndex];
-    }
-    else if (paramIndex == 3 || paramIndex == 4) { // Extended fine tuning controls
-      // Calculate display value based on range
-      if (val <= 0.25) {
-        // Semitone range (negative)
-        float semiRange = val / 0.25;
-        int semitones = (int)(-12 + (semiRange * 11)); // -12 to -1
-        line2 = String(semitones) + "st";
-      } else if (val >= 0.75) {
-        // Semitone range (positive)
-        float semiRange = (val - 0.75) / 0.25;
-        int semitones = (int)(1 + (semiRange * 11)); // +1 to +12
-        line2 = "+" + String(semitones) + "st";
-      } else {
-        // Cents range (±25 cents)
-        int cents = (int)((val - 0.5) * 100); // -25 to +25 cents
-        if (cents >= 0) {
-          line2 = "+" + String(cents) + "c";
-        } else {
-          line2 = String(cents) + "c";
-        }
-      }
-    }
-    else {
-      // Show raw parameter value for other controls
-      int displayValue = (int)(val * 127); // 0-127 MIDI scale
-      line2 = String(displayValue);
-    }
-    
-    displayText(line1, line2);
-  }
-}
-
 float getOscillatorRange(float val) {
   if (val < 0.167) return 0.25;        // 32'
   else if (val < 0.333) return 0.5;    // 16'
@@ -1156,27 +859,15 @@ void updateOscillatorFrequencies() {
   }
 }
 
-void updateWaveforms() {
-  // Update waveforms for all voices
+void updateAllVoiceParameters() {
+  // Update all parameters for all voices in one loop (for initialization)
   for (int v = 0; v < VOICES; v++) {
     osc1[v].begin(osc1Wave);
     osc2[v].begin(osc2Wave);
     osc3[v].begin(osc3Wave);
-  }
-}
-
-void updateMixerLevels() {
-  // Update mixer levels for all voices
-  for (int v = 0; v < VOICES; v++) {
-    oscMix[v].gain(0, vol1 * 1.0); // Full volume levels
-    oscMix[v].gain(1, vol2 * 1.0);
-    oscMix[v].gain(2, vol3 * 1.0);
-  }
-}
-
-void updateNoiseLevel() {
-  // Update noise level for all voices
-  for (int v = 0; v < VOICES; v++) {
+    oscMix[v].gain(0, vol1);
+    oscMix[v].gain(1, vol2);
+    oscMix[v].gain(2, vol3);
     oscMix[v].gain(3, noiseVol);
   }
 }
@@ -1502,821 +1193,6 @@ void noteOff(int note) {
   }
 }
 
-// Navigation functions for hierarchical menu
-void navigateMenuForward() {
-  switch(currentMenuState) {
-    case PARENT_MENU:
-      if (menuIndex == 0) {
-        // Skip PRESETS state and go directly to preset browse
-        inPresetBrowse = true;
-        presetBrowseIndex = 0;
-        return; // Don't change currentMenuState, stay in PARENT_MENU
-      }
-      else if (menuIndex == 1) currentMenuState = OSC_1;
-      else if (menuIndex == 2) currentMenuState = OSC_2;
-      else if (menuIndex == 3) currentMenuState = OSC_3;
-      else if (menuIndex == 4) currentMenuState = NOISE;
-      else if (menuIndex == 5) currentMenuState = ENVELOPES;
-      else if (menuIndex == 6) currentMenuState = FILTER;
-      else if (menuIndex == 7) currentMenuState = LFO;
-      else if (menuIndex == 8) currentMenuState = VOICE_MODE;
-      else if (menuIndex == 9) currentMenuState = SETTINGS;
-      else if (menuIndex == 10) {
-        // Exit menu completely
-        inMenu = false;
-        inPresetBrowse = false;
-        return;
-      }
-      menuIndex = 0; // Reset index for sub-menu
-      break;
-    case OSC_1:
-      if (menuIndex == 0) currentMenuState = OSC1_RANGE;
-      else if (menuIndex == 1) currentMenuState = OSC1_WAVE;
-      else if (menuIndex == 2) currentMenuState = OSC1_VOLUME;
-      else if (menuIndex == 3) currentMenuState = OSC1_FINE;
-      else if (menuIndex == 4) {
-        // Back to main menu
-        currentMenuState = PARENT_MENU;
-        menuIndex = 1; // Set to OSC_1 position in main menu
-        return;
-      }
-      break;
-    case OSC_2:
-      if (menuIndex == 0) currentMenuState = OSC2_RANGE;
-      else if (menuIndex == 1) currentMenuState = OSC2_WAVE;
-      else if (menuIndex == 2) currentMenuState = OSC2_VOLUME;
-      else if (menuIndex == 3) currentMenuState = OSC2_FINE;
-      else if (menuIndex == 4) {
-        // Back to main menu
-        currentMenuState = PARENT_MENU;
-        menuIndex = 2; // Set to OSC_2 position in main menu
-        return;
-      }
-      break;
-    case OSC_3:
-      if (menuIndex == 0) currentMenuState = OSC3_RANGE;
-      else if (menuIndex == 1) currentMenuState = OSC3_WAVE;
-      else if (menuIndex == 2) currentMenuState = OSC3_VOLUME;
-      else if (menuIndex == 3) currentMenuState = OSC3_FINE;
-      else if (menuIndex == 4) {
-        // Back to main menu
-        currentMenuState = PARENT_MENU;
-        menuIndex = 3; // Set to OSC_3 position in main menu
-        return;
-      }
-      break;
-    case NOISE:
-      if (menuIndex == 0) currentMenuState = NOISE_VOLUME;
-      else if (menuIndex == 1) currentMenuState = NOISE_TYPE;
-      else if (menuIndex == 2) {
-        // Back to main menu
-        currentMenuState = PARENT_MENU;
-        menuIndex = 4; // Set to NOISE position in main menu
-        return;
-      }
-      break;
-    case ENVELOPES:
-      if (menuIndex == 0) currentMenuState = AMP_ATTACK;
-      else if (menuIndex == 1) currentMenuState = AMP_SUSTAIN;
-      else if (menuIndex == 2) currentMenuState = AMP_DECAY;
-      else if (menuIndex == 3) currentMenuState = FILTER_ATTACK;
-      else if (menuIndex == 4) currentMenuState = FILTER_DECAY;
-      else if (menuIndex == 5) currentMenuState = FILTER_SUSTAIN;
-      else if (menuIndex == 6) {
-        // Back to main menu
-        currentMenuState = PARENT_MENU;
-        menuIndex = 5; // Set to ENVELOPES position in main menu
-        return;
-      }
-      break;
-    case FILTER:
-      if (menuIndex == 0) currentMenuState = CUTOFF;
-      else if (menuIndex == 1) currentMenuState = RESONANCE;
-      else if (menuIndex == 2) currentMenuState = FILTER_STRENGTH;
-      else if (menuIndex == 3) {
-        // Back to main menu
-        currentMenuState = PARENT_MENU;
-        menuIndex = 6; // Set to FILTER position in main menu
-        return;
-      }
-      break;
-    case LFO:
-      if (menuIndex == 0) currentMenuState = LFO_RATE;
-      else if (menuIndex == 1) currentMenuState = LFO_DEPTH;
-      else if (menuIndex == 2) currentMenuState = LFO_TOGGLE;
-      else if (menuIndex == 3) currentMenuState = LFO_TARGET;
-      else if (menuIndex == 4) {
-        // Back to main menu
-        currentMenuState = PARENT_MENU;
-        menuIndex = 7; // Set to LFO position in main menu
-        return;
-      }
-      break;
-    case VOICE_MODE:
-      if (menuIndex == 0) currentMenuState = PLAY_MODE;
-      else if (menuIndex == 1) currentMenuState = GLIDE_TIME;
-      else if (menuIndex == 2) {
-        // Back to main menu
-        currentMenuState = PARENT_MENU;
-        menuIndex = 8; // Set to VOICE_MODE position in main menu
-        return;
-      }
-      break;
-    case SETTINGS:
-      if (menuIndex == 0) currentMenuState = MACRO_KNOBS;
-      else if (menuIndex == 1) currentMenuState = MIDI_CHANNEL;
-      else if (menuIndex == 2) {
-        currentMenuState = PARENT_MENU;
-        menuIndex = 9;
-        return;
-      }
-      break;
-    default:
-      // Already in a parameter, can't go deeper
-      break;
-  }
-}
-
-void incrementMenuIndex() {
-  switch(currentMenuState) {
-    case PARENT_MENU:
-      menuIndex++;
-      if (menuIndex > 10) menuIndex = 0; // Wrap to first item (now 10 items: 0-9)
-      break;
-    case OSC_1:
-      menuIndex++;
-      if (menuIndex > 4) menuIndex = 0; // OSC1 has 5 items (0-4) including Back
-      break;
-    case OSC_2:
-      menuIndex++;
-      if (menuIndex > 4) menuIndex = 0; // OSC2 has 5 items (0-4) including Back
-      break;
-    case OSC_3:
-      menuIndex++;
-      if (menuIndex > 4) menuIndex = 0; // OSC3 has 5 items (0-4) including Back
-      break;
-    case NOISE:
-      menuIndex++;
-      if (menuIndex > 2) menuIndex = 0; // Noise has 3 items (0-2) including Back
-      break;
-    case ENVELOPES:
-      menuIndex++;
-      if (menuIndex > 6) menuIndex = 0; // Envelopes has 7 items (0-6) including Back
-      break;
-    case FILTER:
-      menuIndex++;
-      if (menuIndex > 3) menuIndex = 0; // Filter has 4 items (0-3) including Back
-      break;
-    case LFO:
-      menuIndex++;
-      if (menuIndex > 4) menuIndex = 0; // LFO has 5 items (0-4) including Back
-      break;
-    case VOICE_MODE:
-      menuIndex++;
-      if (menuIndex > 2) menuIndex = 0; // Voice Mode has 3 items (0-2) including Back
-      break;
-    case SETTINGS:
-      menuIndex++;
-      if (menuIndex > 2) menuIndex = 0; // Settings has 3 items (0-2) including Back
-      break;
-    default:
-      // In a parameter menu, no navigation
-      break;
-  }
-}
-
-void decrementMenuIndex() {
-  switch(currentMenuState) {
-    case PARENT_MENU:
-      menuIndex--;
-      if (menuIndex < 0) menuIndex = 10; // Wrap to last item (Exit)
-      break;
-    case OSC_1:
-      menuIndex--;
-      if (menuIndex < 0) menuIndex = 4; // Wrap to Back button (0-4)
-      break;
-    case OSC_2:
-      menuIndex--;
-      if (menuIndex < 0) menuIndex = 4; // Wrap to Back button (0-4)
-      break;
-    case OSC_3:
-      menuIndex--;
-      if (menuIndex < 0) menuIndex = 4; // Wrap to Back button (0-4)
-      break;
-    case NOISE:
-      menuIndex--;
-      if (menuIndex < 0) menuIndex = 2; // Wrap to Back button (0-2)
-      break;
-    case ENVELOPES:
-      menuIndex--;
-      if (menuIndex < 0) menuIndex = 6; // Wrap to Back button (0-6)
-      break;
-    case FILTER:
-      menuIndex--;
-      if (menuIndex < 0) menuIndex = 3; // Wrap to Back button (0-3)
-      break;
-    case LFO:
-      menuIndex--;
-      if (menuIndex < 0) menuIndex = 4; // Wrap to Back button (0-4)
-      break;
-    case VOICE_MODE:
-      menuIndex--;
-      if (menuIndex < 0) menuIndex = 2; // Wrap to Back button (0-2)
-      break;
-    case SETTINGS:
-      menuIndex--;
-      if (menuIndex < 0) menuIndex = 2; // Wrap to Back button (0-2)
-      break;
-    default:
-      // In a parameter menu, no navigation
-      break;
-  }
-}
-
-void navigateMenuBackward() {
-  switch(currentMenuState) {
-    case PARENT_MENU:
-      menuIndex--;
-      if (menuIndex < 0) menuIndex = 7; // Wrap to last item (LFO)
-      break;
-    case OSC_1:
-      menuIndex--;
-      if (menuIndex < 0) menuIndex = 2; // Wrap to last OSC1 item
-      break;
-    case OSC_2:
-      menuIndex--;
-      if (menuIndex < 0) menuIndex = 3; // Wrap to last OSC2 item
-      break;
-    case OSC_3:
-      menuIndex--;
-      if (menuIndex < 0) menuIndex = 3; // Wrap to last OSC3 item
-      break;
-    case NOISE:
-      menuIndex = 0; // Only one item, stay at 0
-      break;
-    case ENVELOPES:
-      menuIndex--;
-      if (menuIndex < 0) menuIndex = 5; // Wrap to last envelope item
-      break;
-    case FILTER:
-      menuIndex--;
-      if (menuIndex < 0) menuIndex = 1; // Wrap to last filter item
-      break;
-    default:
-      // In a parameter menu, can't navigate backward with encoder
-      break;
-  }
-}
-
-void backMenuAction() {
-  switch(currentMenuState) {
-    case PARENT_MENU:
-      // Already at top level
-      break;
-    case OSC_1:
-    case OSC_2:
-    case OSC_3:
-    case NOISE:
-    case ENVELOPES:
-    case FILTER:
-    case LFO:
-    case VOICE_MODE:
-    case SETTINGS:
-      currentMenuState = PARENT_MENU;
-      break;
-    case OSC1_RANGE:
-    case OSC1_WAVE:
-    case OSC1_VOLUME:
-    case OSC1_FINE:
-      currentMenuState = OSC_1;
-      break;
-    case OSC2_RANGE:
-    case OSC2_WAVE:
-    case OSC2_VOLUME:
-    case OSC2_FINE:
-      currentMenuState = OSC_2;
-      break;
-    case OSC3_RANGE:
-    case OSC3_WAVE:
-    case OSC3_VOLUME:
-    case OSC3_FINE:
-      currentMenuState = OSC_3;
-      break;
-    case NOISE_VOLUME:
-      currentMenuState = NOISE;
-      break;
-    case AMP_ATTACK:
-    case AMP_SUSTAIN:
-    case AMP_DECAY:
-    case FILTER_ATTACK:
-    case FILTER_DECAY:
-    case FILTER_SUSTAIN:
-      currentMenuState = ENVELOPES;
-      break;
-    case CUTOFF:
-    case RESONANCE:
-    case FILTER_STRENGTH:
-      currentMenuState = FILTER;
-      break;
-    case LFO_RATE:
-    case LFO_DEPTH:
-    case LFO_TOGGLE:
-    case LFO_TARGET:
-      currentMenuState = LFO;
-      break;
-    case PLAY_MODE:
-    case GLIDE_TIME:
-    case NOISE_TYPE:
-      currentMenuState = VOICE_MODE;
-      break;
-    case MACRO_KNOBS:
-    case MIDI_CHANNEL:
-      currentMenuState = SETTINGS;
-      break;
-  }
-}
-
-
-void handleEncoder() {
-  // Use the menuEncoder library object for smooth operation
-  // Adjust encoder sensitivity based on display type
-#ifdef USE_OLED_DISPLAY
-  long newMenuValue = menuEncoder.read() / 4; // Less sensitive for OLED encoder
-#else
-  long newMenuValue = menuEncoder.read() / 2; // Standard sensitivity for separate encoder
-#endif
-  static long oldMenuValue = 0;
-  
-  
-  if (newMenuValue != oldMenuValue) {
-    if (inMenu) {
-      if (inPresetBrowse) {
-        // In preset browse mode
-        if (newMenuValue > oldMenuValue) {
-          presetBrowseIndex++;
-          if (presetBrowseIndex > NUM_PRESETS) { // NUM_PRESETS = "Back" option
-            presetBrowseIndex = 0;
-          }
-        } else {
-          presetBrowseIndex--;
-          if (presetBrowseIndex < 0) {
-            presetBrowseIndex = NUM_PRESETS; // Wrap to "Back"
-          }
-        }
-        updateDisplay();
-      } else if (getParameterIndex(currentMenuState) >= 0) {
-        // On a parameter - adjust value directly
-        int paramIndex = getParameterIndex(currentMenuState);
-        if (newMenuValue > oldMenuValue) {
-          if (paramIndex == 24) { // LFO Toggle - instant toggle with single turn
-            allParameterValues[paramIndex] = constrain(allParameterValues[paramIndex] + 0.5, 0.0, 1.0);
-          } else if (paramIndex == 25) { // LFO Target - medium increment for 3 positions 
-            allParameterValues[paramIndex] = constrain(allParameterValues[paramIndex] + 0.03, 0.0, 1.0);
-          } else if (paramIndex == 26) { // Play Mode - large increment for 1-turn switching
-            allParameterValues[paramIndex] = constrain(allParameterValues[paramIndex] + 0.05, 0.0, 1.0);
-          } else if (paramIndex == 28) { // Noise Type - instant toggle with single turn
-            allParameterValues[paramIndex] = constrain(allParameterValues[paramIndex] + 0.5, 0.0, 1.0);
-          } else if (paramIndex == 29) { // Macro Mode - instant toggle with single turn
-            allParameterValues[paramIndex] = constrain(allParameterValues[paramIndex] + 0.5, 0.0, 1.0);
-          } else if (paramIndex == 30) { // MIDI Channel - step through channels
-            allParameterValues[paramIndex] = constrain(allParameterValues[paramIndex] + (1.0/16.0), 0.0, 1.0);
-          } else {
-            // All continuous parameters - consistent 128-step feel across all controls
-            allParameterValues[paramIndex] = constrain(allParameterValues[paramIndex] + 1.0/128.0, 0.0, 1.0);
-          }
-          updateParameterFromMenu(paramIndex, allParameterValues[paramIndex]);
-        } else {
-          if (paramIndex == 24) { // LFO Toggle - instant toggle with single turn
-            allParameterValues[paramIndex] = constrain(allParameterValues[paramIndex] - 0.5, 0.0, 1.0);
-          } else if (paramIndex == 25) { // LFO Target - medium increment for 3 positions
-            allParameterValues[paramIndex] = constrain(allParameterValues[paramIndex] - 0.03, 0.0, 1.0);
-          } else if (paramIndex == 26) { // Play Mode - large increment for 1-turn switching
-            allParameterValues[paramIndex] = constrain(allParameterValues[paramIndex] - 0.05, 0.0, 1.0);
-          } else if (paramIndex == 28) { // Noise Type - instant toggle with single turn
-            allParameterValues[paramIndex] = constrain(allParameterValues[paramIndex] - 0.5, 0.0, 1.0);
-          } else if (paramIndex == 29) { // Macro Mode - instant toggle with single turn
-            allParameterValues[paramIndex] = constrain(allParameterValues[paramIndex] - 0.5, 0.0, 1.0);
-          } else if (paramIndex == 30) { // MIDI Channel - step through channels
-            allParameterValues[paramIndex] = constrain(allParameterValues[paramIndex] - (1.0/16.0), 0.0, 1.0);
-          } else {
-            // All continuous parameters - consistent 128-step feel across all controls
-            allParameterValues[paramIndex] = constrain(allParameterValues[paramIndex] - 1.0/128.0, 0.0, 1.0);
-          }
-          updateParameterFromMenu(paramIndex, allParameterValues[paramIndex]);
-        }
-        updateDisplay();
-      } else {
-        // In navigation mode: move through menu options
-        if (newMenuValue > oldMenuValue) {
-          incrementMenuIndex();
-        } else {
-          decrementMenuIndex();
-        }
-        updateDisplay();
-      }
-    } else {
-      // Not in menu - handle cutoff control (parameter 11) like other encoders
-      // Just read menuEncoder like a regular encoder for cutoff
-#ifdef USE_OLED_DISPLAY
-      encoderValues[11] = menuEncoder.read() / 4; // Adjusted sensitivity for OLED encoder
-#else
-      encoderValues[11] = menuEncoder.read() / 2; // Standard sensitivity for separate encoder
-#endif
-    }
-    oldMenuValue = newMenuValue;
-  }
-  
-  // Simple single-click button handling
-  static bool lastButtonState = HIGH;
-  
-  bool currentButtonState = digitalRead(MENU_ENCODER_SW);
-  
-  // Button press detection (on press, not release) 
-  if (currentButtonState == LOW && lastButtonState == HIGH) {
-    if (!inMenu) {
-      // Enter menu
-      inMenu = true;
-      currentMenuState = PARENT_MENU;
-      menuIndex = 0;
-      inPresetBrowse = false;
-      printCurrentPresetValues();
-      updateDisplay();
-    } else if (inPresetBrowse) {
-      // In preset browse mode
-      if (presetBrowseIndex == NUM_PRESETS) {
-        // "Back" option selected
-        inPresetBrowse = false;
-      } else {
-        // Load selected preset and STAY in presets menu
-        loadPreset(presetBrowseIndex);
-      }
-      updateDisplay();
-    } else {
-      // Navigate into sub-menu or back from parameter
-      if (getParameterIndex(currentMenuState) >= 0) {
-        // On a parameter - go back to parent submenu (consistent behavior)
-        backMenuAction();
-      } else if (currentMenuState == MACRO_KNOBS) {
-        // Toggle macro mode
-        macroMode = !macroMode;
-      } else {
-        // Navigate deeper into menu
-        navigateMenuForward();
-      }
-      updateDisplay();
-    }
-  }
-  
-  lastButtonState = currentButtonState;
-}
-
-void loadPreset(int presetIndex) {
-  if (presetIndex >= 0 && presetIndex < NUM_PRESETS) {
-    currentPreset = presetIndex;
-    
-    Serial.print("Loading preset: ");
-    Serial.println(presets[presetIndex].name);
-    
-    // Debug: Show what we're loading vs what we get
-    Serial.println("Preset data -> Loaded value -> Actual Range:");
-    for (int i = 0; i < 3; i++) { // Just show first 3 (ranges) for debugging
-      float presetValue = presets[presetIndex].parameters[i];
-      allParameterValues[i] = presetValue;
-      updateSynthParameter(i, allParameterValues[i]);
-      
-      float actualRange = (i == 0) ? osc1Range : (i == 1) ? osc2Range : osc3Range;
-      
-      Serial.print("Osc");
-      Serial.print(i + 1);
-      Serial.print(": ");
-      Serial.print(presetValue, 3);
-      Serial.print(" -> ");
-      Serial.print(allParameterValues[i], 3);
-      Serial.print(" -> ");
-      Serial.println(actualRange, 3);
-    }
-    
-    // Load remaining parameters without debug spam (now includes LFO, Play Mode and Glide parameters)
-    for (int i = 3; i < 28; i++) {
-      allParameterValues[i] = presets[presetIndex].parameters[i];
-      updateSynthParameter(i, allParameterValues[i]);
-    }
-    
-    Serial.println("Preset loaded.");
-    
-    // Update display
-    updateDisplay();
-  }
-}
-
-void resetEncoderBaselines() {
-  // Reset all encoder positions to match current parameter values
-  // This syncs the encoder counting with the actual parameter state
-  Serial.println("Resetting encoder baselines to current parameter values...");
-  
-  for (int i = 0; i < 20; i++) {
-    // Calculate what the encoder value should be based on current parameter
-    long targetEncoderValue = (long)(allParameterValues[i] * 100);
-    
-    // Reset the encoder objects to this baseline value
-    switch(i) {
-      case 0: enc1.write(targetEncoderValue * 4); break;
-      case 1: enc2.write(targetEncoderValue * 4); break;
-      case 2: enc3.write(targetEncoderValue * 4); break;
-      case 3: enc4.write(targetEncoderValue * 4); break;
-      case 4: enc5.write(targetEncoderValue * 4); break;
-      case 5: enc6.write(targetEncoderValue * 4); break;
-      case 6: enc7.write(targetEncoderValue * 4); break;
-      case 7: enc8.write(targetEncoderValue * 4); break;
-      case 8: enc9.write(targetEncoderValue * 4); break;
-      case 9: enc10.write(targetEncoderValue * 4); break;
-      case 10: enc11.write(targetEncoderValue * 4); break;
-      case 12: enc13.write(targetEncoderValue * 4); break;
-      case 13: enc14.write(targetEncoderValue * 4); break;
-      case 14: enc15.write(targetEncoderValue * 4); break;
-      case 15: enc16.write(targetEncoderValue * 4); break;
-      case 16: enc17.write(targetEncoderValue * 4); break;
-      case 17: enc18.write(targetEncoderValue * 4); break;
-      case 18: enc19.write(targetEncoderValue * 4); break;
-      case 19: enc20.write(targetEncoderValue * 4); break;
-    }
-    
-    // Update our tracking arrays
-    encoderValues[i] = targetEncoderValue;
-    lastEncoderValues[i] = targetEncoderValue;
-  }
-  
-  Serial.println("Encoder baselines reset. Physical knob positions now match parameter values.");
-}
-
-void printCurrentPresetValues() {
-  Serial.println("\n=== CURRENT PRESET DEBUG ===");
-  Serial.print("Active Preset: ");
-  Serial.print(currentPreset + 1);
-  Serial.print(" (");
-  Serial.print(presets[currentPreset].name);
-  Serial.println(")");
-  
-  Serial.println("\nCurrent Parameter Values:");
-  Serial.print("{");
-  for (int i = 0; i < 28; i++) {
-    Serial.print(allParameterValues[i], 3); // 3 decimal places
-    if (i < 27) Serial.print(", ");
-  }
-  Serial.println("}");
-  Serial.println("Copy this line into your preset array!");
-  
-  // Show key parameters with names
-  Serial.println("\nKey Parameters:");
-  Serial.print("Osc1 Range: "); Serial.print(allParameterValues[0], 3);
-  Serial.print(" | Osc2 Range: "); Serial.print(allParameterValues[1], 3);
-  Serial.print(" | Osc3 Range: "); Serial.println(allParameterValues[2], 3);
-  Serial.print("Osc1 Wave: "); Serial.print(allParameterValues[9], 3);
-  Serial.print(" | Osc2 Wave: "); Serial.print(allParameterValues[10], 3);
-  Serial.print(" | Filter: "); Serial.println(allParameterValues[11], 3);
-  
-  // Debug: Show first few encoder raw values
-  Serial.println("\nEncoder Raw Values:");
-  for (int i = 0; i < 5; i++) {
-    Serial.print("Enc");
-    Serial.print(i);
-    Serial.print(": ");
-    Serial.print(encoderValues[i]);
-    Serial.print(" -> ");
-    Serial.println(allParameterValues[i], 3);
-  }
-  Serial.println("=============================\n");
-  
-  // Offer to reset encoder baselines
-  Serial.println("Type 'r' in Serial Monitor to reset encoder baselines to current values");
-}
-
-// Display helper functions - String-based approach to prevent crashes
-void displayText(String line1, String line2) {
-#ifdef USE_LCD_DISPLAY
-  lcd.clear();
-  delayMicroseconds(500);
-  lcd.setCursor(0, 0);
-  lcd.print(line1);
-  lcd.setCursor(0, 1);  
-  lcd.print(line2);
-#endif
-
-#ifdef USE_OLED_DISPLAY
-  display.clearBuffer();
-  display.setFont(u8g2_font_8x13_tf);
-  if (line1.length() > 0) {
-    display.drawStr(3, 20, line1.c_str());
-  }
-  if (line2.length() > 0) {
-    display.drawStr(3, 40, line2.c_str());
-  }
-  display.sendBuffer();
-#endif
-}
-
-void updateDisplay() {
-  // Throttle display updates to prevent corruption
-  static unsigned long lastDisplayUpdate = 0;
-  unsigned long now = millis();
-  if (now - lastDisplayUpdate < 25) return; // Limit to 40Hz updates
-  lastDisplayUpdate = now;
-  
-  String line1 = "";
-  String line2 = "";
-  
-  if (inMenu) {
-    
-    if (inPresetBrowse) {
-      // Preset browse mode
-      line1 = "Presets";
-      if (presetBrowseIndex == NUM_PRESETS) {
-        line2 = "< Back";
-      } else {
-        line2 = String(presetBrowseIndex + 1) + ". " + String(presets[presetBrowseIndex].name);
-      }
-    } else {
-      // Regular menu navigation
-      // lcd.print("MENU ");
-      
-      switch(currentMenuState) {
-        case PARENT_MENU:
-          line1 = "Menu";
-          if (menuIndex == 0) line2 = "Presets";
-          else if (menuIndex == 1) line2 = "Oscillator 1";
-          else if (menuIndex == 2) line2 = "Oscillator 2";
-          else if (menuIndex == 3) line2 = "Oscillator 3";
-          else if (menuIndex == 4) line2 = "Noise";
-          else if (menuIndex == 5) line2 = "Envelopes";
-          else if (menuIndex == 6) line2 = "Filter";
-          else if (menuIndex == 7) line2 = "LFO";
-          else if (menuIndex == 8) line2 = "Voice Mode";
-          else if (menuIndex == 9) line2 = "Settings";
-          else if (menuIndex == 10) line2 = "< Exit";
-          break;
-          
-          
-        case OSC_1:
-          line1 = "Oscillator 1";
-          if (menuIndex == 0) line2 = "Range";
-          else if (menuIndex == 1) line2 = "Waveform";
-          else if (menuIndex == 2) line2 = "Volume";
-          else if (menuIndex == 3) line2 = "Fine Tune";
-          else if (menuIndex == 4) line2 = "< Back";
-          break;
-          
-        case OSC_2:
-          line1 = "Oscillator 2";
-          if (menuIndex == 0) line2 = "Range";
-          else if (menuIndex == 1) line2 = "Waveform";
-          else if (menuIndex == 2) line2 = "Volume";
-          else if (menuIndex == 3) line2 = "Fine Tune";
-          else if (menuIndex == 4) line2 = "< Back";
-          break;
-          
-        case OSC_3:
-          line1 = "Oscillator 3";
-          if (menuIndex == 0) line2 = "Range";
-          else if (menuIndex == 1) line2 = "Waveform";
-          else if (menuIndex == 2) line2 = "Volume";
-          else if (menuIndex == 3) line2 = "Fine Tune";
-          else if (menuIndex == 4) line2 = "< Back";
-          break;
-          
-        case NOISE:
-          line1 = "Noise";
-          if (menuIndex == 0) line2 = "Volume";
-          else if (menuIndex == 1) line2 = "Type";
-          else if (menuIndex == 2) line2 = "< Back";
-          break;
-          
-        case ENVELOPES:
-          line1 = "Envelopes";
-          if (menuIndex == 0) line2 = "Amp Attack";
-          else if (menuIndex == 1) line2 = "Amp Sustain";
-          else if (menuIndex == 2) line2 = "Amp Decay";
-          else if (menuIndex == 3) line2 = "Filter Attack";
-          else if (menuIndex == 4) line2 = "Filter Decay";
-          else if (menuIndex == 5) line2 = "Filter Sustain";
-          else if (menuIndex == 6) line2 = "< Back";
-          break;
-          
-        case FILTER:
-          line1 = "Filter";
-          if (menuIndex == 0) line2 = "Cutoff";
-          else if (menuIndex == 1) line2 = "Resonance";
-          else if (menuIndex == 2) line2 = "Strength";
-          else if (menuIndex == 3) line2 = "< Back";
-          break;
-          
-        case LFO:
-          line1 = "LFO";
-          if (menuIndex == 0) line2 = "Rate";
-          else if (menuIndex == 1) line2 = "Depth";
-          else if (menuIndex == 2) line2 = "Toggle";
-          else if (menuIndex == 3) line2 = "Target";
-          else if (menuIndex == 4) line2 = "< Back";
-          break;
-          
-        case VOICE_MODE:
-          line1 = "Voice Mode";
-          if (menuIndex == 0) line2 = "Play Mode";
-          else if (menuIndex == 1) line2 = "Glide Time";
-          else if (menuIndex == 2) line2 = "< Back";
-          break;
-          
-        case SETTINGS:
-          line1 = "Settings";
-          if (menuIndex == 0) line2 = "Macro Knobs";
-          else if (menuIndex == 1) line2 = "MIDI Channel";
-          else if (menuIndex == 2) line2 = "< Back";
-          break;
-          
-        case MACRO_KNOBS:
-          line1 = "Filter Knobs:";
-          line2 = macroMode ? "LFO Controls" : "Filter Env";
-          break;
-          
-        case MIDI_CHANNEL:
-          line1 = "MIDI Channel:";
-          line2 = (midiChannel == 0) ? "Omni" : String(midiChannel);
-          break;
-          
-        default:
-          {
-            // Parameter editing
-            int paramIndex = getParameterIndex(currentMenuState);
-            if (paramIndex >= 0) {
-              line1 = controlNames[paramIndex];
-              
-              // Always show current value (no "Click to edit" screen)
-              if (paramIndex == 3 || paramIndex == 4 || paramIndex == 20) { // Extended fine tuning
-                float val = allParameterValues[paramIndex];
-                if (val <= 0.25) {
-                  // Semitone range (negative)
-                  float semiRange = val / 0.25;
-                  int semitones = (int)(-12 + (semiRange * 11)); // -12 to -1
-                  line2 = String(semitones) + "st";
-                } else if (val >= 0.75) {
-                  // Semitone range (positive)
-                  float semiRange = (val - 0.75) / 0.25;
-                  int semitones = (int)(1 + (semiRange * 11)); // +1 to +12
-                  line2 = "+" + String(semitones) + "st";
-                } else {
-                  // Cents range (±25 cents)
-                  int cents = (int)((val - 0.5) * 100); // -25 to +25 cents
-                  line2 = (cents >= 0 ? "+" : "") + String(cents) + "c";
-                }
-              } else if (paramIndex == 22) { // LFO Rate
-                float rate = 0.1 + allParameterValues[paramIndex] * 19.9;
-                line2 = String(rate, 1) + " Hz";
-              } else if (paramIndex == 23) { // LFO Depth
-                int depth = (int)(allParameterValues[paramIndex] * 100);
-                line2 = String(depth) + "%";
-              } else if (paramIndex == 24) { // LFO Toggle
-                line2 = lfoEnabled ? "ON" : "OFF"; // Use actual variable instead of parameter
-              } else if (paramIndex == 25) { // LFO Target
-                if (lfoTarget == 0) line2 = "Pitch";
-                else if (lfoTarget == 1) line2 = "Filter";
-                else line2 = "Amp";
-              } else if (paramIndex == 26) { // Play Mode
-                if (playMode == 0) line2 = "Mono";
-                else if (playMode == 1) line2 = "Poly";
-                else line2 = "Legato";
-              } else if (paramIndex == 27) { // Glide Time
-                if (glideTime == 0.0) {
-                  line2 = "OFF";
-                } else {
-                  float timeMs = 50 + (glideTime * 950); // 50ms to 1000ms
-                  line2 = String((int)timeMs) + "ms";
-                }
-              } else if (paramIndex == 28) { // Noise Type
-                line2 = (noiseType == 0) ? "White" : "Pink";
-              } else if (paramIndex == 29) { // Macro Mode
-                line2 = macroMode ? "LFO Controls" : "Filter Env";
-              } else if (paramIndex == 30) { // MIDI Channel
-                line2 = (midiChannel == 0) ? "Omni" : String(midiChannel);
-              } else {
-                // Show 0-127 values (MIDI standard)
-                int displayValue = (int)(allParameterValues[paramIndex] * 127);
-                line2 = String(displayValue);
-              }
-              
-              // line1 and line2 will be displayed by the function's final displayText call
-            }
-          }
-          break;
-      }
-    }
-  } else {
-    line1 = "MiniTeensy";
-    line2 = "Press for menu";
-  }
-  
-  // Display the two lines
-  displayText(line1, line2);
-}
-
 void loop() {
   // Process ALL USB Device MIDI messages immediately for minimal latency
   while (usbMIDI.read()) {
@@ -2349,20 +1225,12 @@ void loop() {
   }
   
 #ifdef ENABLE_DIN_MIDI
-  // Process DIN MIDI messages
   MIDI.read();
 #endif
   
-  // Read controls and update synth
   readAllControls();
-  
-  // Handle encoder
   handleEncoder();
-  
-  // Update LFO filter modulation
   updateLFOModulation();
-  
-  // Update glide/portamento
   updateGlide();
   
   // Minimal serial input check for performance
@@ -2372,6 +1240,5 @@ void loop() {
       resetEncoderBaselines();
     }
   }
-  
   delay(5); // Reduced delay for better responsiveness
 }

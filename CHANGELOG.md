@@ -11,6 +11,8 @@ All notable changes to the MiniTeensy Synth project will be documented in this f
   - Menu Encoder SW: Pin 15 → Pin 13
 - Updated README.md pinout diagrams and wiring tables
 - Added I2C display option
+- Moved MenuNavigation to a separate file
+- Added config file
 
 ### Fixed
 - Menu encoder moved from pin 13 per the Encoder library documentation (LED interference)
