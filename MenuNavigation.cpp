@@ -281,6 +281,16 @@ void handleEncoder() {
 #endif
   static long oldMenuValue = 0;
   if (newMenuValue != oldMenuValue) {
+    // If menu encoder is set to -1 (menu-only mode), auto-enter menu on rotation
+    if (!inMenu && MENU_ENCODER_PARAM == -1) {
+      inMenu = true;
+      currentMenuState = PARENT_MENU;
+      menuIndex = 0;
+      inPresetBrowse = false;
+      printCurrentPresetValues();
+      updateDisplay();
+    }
+    
     if (inMenu) {
       if (inPresetBrowse) {
         if (newMenuValue > oldMenuValue) {
@@ -889,30 +899,36 @@ void updateEncoderParameter(int paramIndex, int change) {
 
 void resetEncoderBaselines() {
   for (int i = 0; i < 20; i++) {
-    long targetEncoderValue = (long)(allParameterValues[i] * 100);
-    switch(i) {
-      case 0: enc1.write(targetEncoderValue * 4); break;
-      case 1: enc2.write(targetEncoderValue * 4); break;
-      case 2: enc3.write(targetEncoderValue * 4); break;
-      case 3: enc4.write(targetEncoderValue * 4); break;
-      case 4: enc5.write(targetEncoderValue * 4); break;
-      case 5: enc6.write(targetEncoderValue * 4); break;
-      case 6: enc7.write(targetEncoderValue * 4); break;
-      case 7: enc8.write(targetEncoderValue * 4); break;
-      case 8: enc9.write(targetEncoderValue * 4); break;
-      case 9: enc10.write(targetEncoderValue * 4); break;
-      case 10: enc11.write(targetEncoderValue * 4); break;
-      case 12: enc13.write(targetEncoderValue * 4); break;
-      case 13: enc14.write(targetEncoderValue * 4); break;
-      case 14: enc15.write(targetEncoderValue * 4); break;
-      case 15: enc16.write(targetEncoderValue * 4); break;
-      case 16: enc17.write(targetEncoderValue * 4); break;
-      case 17: enc18.write(targetEncoderValue * 4); break;
-      case 18: enc19.write(targetEncoderValue * 4); break;
-      case 19: enc20.write(targetEncoderValue * 4); break;
+    int paramIndex = encoderMapping[i]; // Use configurable mapping
+    
+    // Only reset encoders that are mapped to valid parameters
+    if (paramIndex != -1 && paramIndex >= 0 && paramIndex < NUM_PARAMETERS) {
+      long targetEncoderValue = (long)(allParameterValues[paramIndex] * 100);
+      switch(i) {
+        case 0: enc1.write(targetEncoderValue * 4); break;
+        case 1: enc2.write(targetEncoderValue * 4); break;
+        case 2: enc3.write(targetEncoderValue * 4); break;
+        case 3: enc4.write(targetEncoderValue * 4); break;
+        case 4: enc5.write(targetEncoderValue * 4); break;
+        case 5: enc6.write(targetEncoderValue * 4); break;
+        case 6: enc7.write(targetEncoderValue * 4); break;
+        case 7: enc8.write(targetEncoderValue * 4); break;
+        case 8: enc9.write(targetEncoderValue * 4); break;
+        case 9: enc10.write(targetEncoderValue * 4); break;
+        case 10: enc11.write(targetEncoderValue * 4); break;
+        case 11: /* menuEncoder handled by MenuNavigation.cpp */ break;
+        case 12: enc13.write(targetEncoderValue * 4); break;
+        case 13: enc14.write(targetEncoderValue * 4); break;
+        case 14: enc15.write(targetEncoderValue * 4); break;
+        case 15: enc16.write(targetEncoderValue * 4); break;
+        case 16: enc17.write(targetEncoderValue * 4); break;
+        case 17: enc18.write(targetEncoderValue * 4); break;
+        case 18: enc19.write(targetEncoderValue * 4); break;
+        case 19: enc20.write(targetEncoderValue * 4); break;
+      }
+      encoderValues[i] = targetEncoderValue;
+      lastEncoderValues[i] = targetEncoderValue;
     }
-    encoderValues[i] = targetEncoderValue;
-    lastEncoderValues[i] = targetEncoderValue;
   }
 }
 
@@ -926,9 +942,9 @@ void printCurrentPresetValues() {
   
   Serial.println("\nCurrent Parameter Values:");
   Serial.print("{");
-  for (int i = 0; i < 28; i++) {
+  for (int i = 0; i < NUM_PARAMETERS; i++) {
     Serial.print(allParameterValues[i], 3); // 3 decimal places
-    if (i < 27) Serial.print(", ");
+    if (i < NUM_PARAMETERS - 1) Serial.print(", ");
   }
   Serial.println("}");
   Serial.println("Copy this line into your preset array!");
@@ -937,18 +953,23 @@ void printCurrentPresetValues() {
   Serial.print("Osc1 Range: "); Serial.print(allParameterValues[0], 3);
   Serial.print(" | Osc2 Range: "); Serial.print(allParameterValues[1], 3);
   Serial.print(" | Osc3 Range: "); Serial.println(allParameterValues[2], 3);
-  Serial.print("Osc1 Wave: "); Serial.print(allParameterValues[9], 3);
-  Serial.print(" | Osc2 Wave: "); Serial.print(allParameterValues[10], 3);
+  Serial.print("Osc1 Wave: "); Serial.print(allParameterValues[5], 3);
+  Serial.print(" | Osc2 Wave: "); Serial.print(allParameterValues[6], 3);
   Serial.print(" | Filter: "); Serial.println(allParameterValues[11], 3);
   
   Serial.println("\nEncoder Raw Values:");
   for (int i = 0; i < 5; i++) {
     Serial.print("Enc");
-    Serial.print(i);
+    Serial.print(i+1);
     Serial.print(": ");
     Serial.print(encoderValues[i]);
     Serial.print(" -> ");
-    Serial.println(allParameterValues[i], 3);
+    int paramIndex = encoderMapping[i];
+    if (paramIndex != -1 && paramIndex >= 0 && paramIndex < NUM_PARAMETERS) {
+      Serial.println(allParameterValues[paramIndex], 3);
+    } else {
+      Serial.println("[DISABLED]");
+    }
   }
   Serial.println("=============================\n");
   

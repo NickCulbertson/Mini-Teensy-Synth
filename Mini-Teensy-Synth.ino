@@ -46,26 +46,36 @@ const char* PROJECT_SUBTITLE = "6-Voice Poly";
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 #endif
 
-Encoder enc1(4, 5);
-Encoder enc2(2, 3);
-Encoder enc3(0, 1);
-Encoder enc4(8, 9);
-Encoder enc5(6, 7);
-Encoder enc6(25, 27);
-Encoder enc7(12, 24);
-Encoder enc8(10, 11);
-Encoder enc9(29, 30);
-Encoder enc10(28, 26);
-Encoder enc11(21, 20);
-Encoder enc13(34, 33);
-Encoder enc14(50, 41);
-Encoder enc15(23, 22);
-Encoder enc16(36, 35);
-Encoder enc17(31, 32);
-Encoder enc18(17, 16);
-Encoder enc19(38, 37);
-Encoder enc20(40, 39);
+// All 19 Mini-Teensy Encoders (using configurable pin definitions from config.h)
+Encoder enc1(ENC_1_CLK, ENC_1_DT);
+Encoder enc2(ENC_2_CLK, ENC_2_DT);
+Encoder enc3(ENC_3_CLK, ENC_3_DT);
+Encoder enc4(ENC_4_CLK, ENC_4_DT);
+Encoder enc5(ENC_5_CLK, ENC_5_DT);
+Encoder enc6(ENC_6_CLK, ENC_6_DT);
+Encoder enc7(ENC_7_CLK, ENC_7_DT);
+Encoder enc8(ENC_8_CLK, ENC_8_DT);
+Encoder enc9(ENC_9_CLK, ENC_9_DT);
+Encoder enc10(ENC_10_CLK, ENC_10_DT);
+Encoder enc11(ENC_11_CLK, ENC_11_DT);
+Encoder enc13(ENC_13_CLK, ENC_13_DT);
+Encoder enc14(ENC_14_CLK, ENC_14_DT);
+Encoder enc15(ENC_15_CLK, ENC_15_DT);
+Encoder enc16(ENC_16_CLK, ENC_16_DT);
+Encoder enc17(ENC_17_CLK, ENC_17_DT);
+Encoder enc18(ENC_18_CLK, ENC_18_DT);
+Encoder enc19(ENC_19_CLK, ENC_19_DT);
+Encoder enc20(ENC_20_CLK, ENC_20_DT);
 Encoder menuEncoder(MENU_ENCODER_DT, MENU_ENCODER_CLK);
+
+// Configurable encoder to parameter mapping (defined in config.h)
+// Array indices: 0=enc1, 1=enc2, ..., 10=enc11, 11=menuEncoder, 12=enc13, 13=enc14, ..., 19=enc20
+const int encoderMapping[20] = {
+  ENC_1_PARAM, ENC_2_PARAM, ENC_3_PARAM, ENC_4_PARAM, ENC_5_PARAM,              // 0-4: enc1-enc5
+  ENC_6_PARAM, ENC_7_PARAM, ENC_8_PARAM, ENC_9_PARAM, ENC_10_PARAM,             // 5-9: enc6-enc10
+  ENC_11_PARAM, MENU_ENCODER_PARAM, ENC_13_PARAM, ENC_14_PARAM, ENC_15_PARAM,   // 10-14: enc11,menuEncoder,enc13-enc15
+  ENC_16_PARAM, ENC_17_PARAM, ENC_18_PARAM, ENC_19_PARAM, ENC_20_PARAM          // 15-19: enc16-enc20
+};
 
 long encoderValues[20] = {0};
 long lastEncoderValues[20] = {0};
@@ -432,6 +442,11 @@ void setup() {
   Serial.begin(9600);
   AudioMemory(48); // Reduced from 60 to minimize latency
   
+  // If you are using the Teensy's MIDI Host connections enable USE_MIDI_HOST in config.
+#ifdef USE_MIDI_HOST
+  USBHost::begin();
+#endif
+
 #ifdef ENABLE_DIN_MIDI
   // Initialize DIN MIDI
   MIDI.begin(MIDI_CHANNEL_OMNI);
@@ -559,28 +574,28 @@ void setup() {
 }
 
 
-// Read all direct encoders
+// Read all 20 Mini-Teensy encoders (excluding menu encoder - handled in MenuNavigation.cpp)
 void readDirectEncoders() {
-  encoderValues[0] = enc1.read() / 4;     // Osc1 Range
-  encoderValues[1] = enc2.read() / 4;     // Osc2 Range
-  encoderValues[2] = enc3.read() / 4;     // Osc3 Range
-  encoderValues[3] = enc4.read() / 4;     // Osc2 Fine
-  encoderValues[4] = enc5.read() / 4;     // Osc3 Fine
-  encoderValues[5] = enc6.read() / 4;     // Osc1 Wave
-  encoderValues[6] = enc7.read() / 4;     // Osc2 Wave
-  encoderValues[7] = enc8.read() / 4;     // Osc3 Wave
-  encoderValues[8] = enc9.read() / 4;     // Volume 1
-  encoderValues[9] = enc10.read() / 4;    // Volume 2
-  encoderValues[10] = enc11.read() / 4;   // Volume 3
-  // encoderValues[11] handled separately for cutoff (uses menuEncoder hardware)
-  encoderValues[12] = enc13.read() / 4;   // Resonance
-  encoderValues[13] = enc14.read() / 4;   // Filter Attack
-  encoderValues[14] = enc15.read() / 4;   // Filter Decay/Release
-  encoderValues[15] = enc16.read() / 4;   // Filter Sustain
-  encoderValues[16] = enc17.read() / 4;   // Noise Volume
-  encoderValues[17] = enc18.read() / 4;   // Amp Attack
-  encoderValues[18] = enc19.read() / 4;   // Amp Sustain
-  encoderValues[19] = enc20.read() / 4;   // Amp Decay
+  encoderValues[0] = enc1.read() / 4;   // enc1
+  encoderValues[1] = enc2.read() / 4;   // enc2
+  encoderValues[2] = enc3.read() / 4;   // enc3
+  encoderValues[3] = enc4.read() / 4;   // enc4
+  encoderValues[4] = enc5.read() / 4;   // enc5
+  encoderValues[5] = enc6.read() / 4;   // enc6
+  encoderValues[6] = enc7.read() / 4;   // enc7
+  encoderValues[7] = enc8.read() / 4;   // enc8
+  encoderValues[8] = enc9.read() / 4;   // enc9
+  encoderValues[9] = enc10.read() / 4;  // enc10
+  encoderValues[10] = enc11.read() / 4; // enc11
+  // encoderValues[11] handled separately for cutoff (uses menuEncoder hardware) in MenuNavigation.cpp
+  encoderValues[12] = enc13.read() / 4; // enc13 (note: no enc12)
+  encoderValues[13] = enc14.read() / 4; // enc14
+  encoderValues[14] = enc15.read() / 4; // enc15
+  encoderValues[15] = enc16.read() / 4; // enc16
+  encoderValues[16] = enc17.read() / 4; // enc17
+  encoderValues[17] = enc18.read() / 4; // enc18
+  encoderValues[18] = enc19.read() / 4; // enc19
+  encoderValues[19] = enc20.read() / 4; // enc20
 }
 
 
@@ -588,7 +603,7 @@ void readAllControls() {
   // Read all encoders
   readDirectEncoders();
   
-  // Check for encoder changes and update parameters
+  // Check for encoder changes and update parameters using configurable mapping
   for (int i = 0; i < 20; i++) {
     if (encoderValues[i] != lastEncoderValues[i]) {
       // If any physical knob is turned, exit menu mode
@@ -597,13 +612,19 @@ void readAllControls() {
       }
       
       int change = encoderValues[i] - lastEncoderValues[i];
+      int paramIndex = encoderMapping[i]; // Use configurable mapping
       
-      int targetParam = i;
-      if (macroMode && i == 13) targetParam = 22;  // Filter Attack -> LFO Rate  
-      if (macroMode && i == 14) targetParam = 23;  // Filter Decay -> LFO Depth
-      if (macroMode && i == 15) targetParam = 25;  // Filter Release -> LFO Target
+      // Only update if encoder is mapped to a valid parameter (not -1)
+      if (paramIndex >= 0 && paramIndex < NUM_PARAMETERS) {
+        // Handle macro mode for mapped parameters
+        int targetParam = paramIndex;
+        if (macroMode && paramIndex == 13) targetParam = 22;  // Filter Attack -> LFO Rate  
+        if (macroMode && paramIndex == 14) targetParam = 23;  // Filter Decay -> LFO Depth
+        if (macroMode && paramIndex == 15) targetParam = 25;  // Filter Sustain -> LFO Target
+        
+        updateEncoderParameter(targetParam, change);
+      }
       
-      updateEncoderParameter(targetParam, change);
       lastEncoderValues[i] = encoderValues[i];
     }
   }

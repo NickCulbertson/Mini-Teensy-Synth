@@ -41,6 +41,8 @@ Video: [**DIY Minimoog Inspired Synth | A Teensy Powered Tribute**](https://yout
 - **16x2 I2C LCD** display
 - Enclosure, knob caps, hookup wire
 
+If using the Teensy's MIDI Host enable `USE_MIDI_HOST` in config.
+
 **Minimal Build:**
 - **Teensy 4.1** + **1x Menu Encoder** + **LCD**
 - USB cable for audio/MIDI output

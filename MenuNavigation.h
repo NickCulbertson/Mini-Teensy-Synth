@@ -4,9 +4,6 @@
 #include "config.h"
 #include <Arduino.h>
 
-// Note: NUM_PARAMETERS and NUM_PRESETS are expected to be defined
-// in the main project file before including this header
-
 // ============================================================================
 // Menu State Enums
 // ============================================================================
@@ -81,6 +78,11 @@ struct MiniTeensyPreset {
   const char* name;
   float parameters[31]; // Fixed size to match presets
 };
+
+// ============================================================================
+// External Variables
+// ============================================================================
+extern const int encoderMapping[20];
 
 // ============================================================================
 // Menu Navigation Function Declarations
