@@ -108,8 +108,9 @@
 #define USE_LCD_DISPLAY
 // #define USE_OLED_DISPLAY
 
-// Optional USB MIDI Host support (in addition to default USB Device MIDI)
-// #define USE_MIDI_HOST       // Uncomment to add USB Host MIDI support for external controllers 
+// MIDI Configuration - Enable the MIDI sources you want to use
+#define USE_USB_DEVICE_MIDI // USB Device MIDI for DAW/computer connection (default)
+// #define USE_MIDI_HOST       // USB Host MIDI for external controllers connected to Teensy 
 
 /*
  * EXAMPLE: DIN MIDI Pin Conflict Resolution

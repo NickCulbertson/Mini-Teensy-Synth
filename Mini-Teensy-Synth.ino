@@ -469,8 +469,6 @@ void setup() {
   Serial.begin(9600);
   AudioMemory(48); // Reduced from 60 to minimize latency
   
-  // USB Device MIDI is always enabled for DAW connection
-  Serial.println("USB Device MIDI enabled");
 
   // Optionally initialize USB Host MIDI for external controllers
 #ifdef USE_MIDI_HOST
@@ -1250,7 +1248,8 @@ void noteOff(int note) {
 }
 
 void loop() {
-  // Process USB Device MIDI messages (always enabled)
+  // Process USB Device MIDI messages (if enabled)
+#ifdef USE_USB_DEVICE_MIDI
   while (usbMIDI.read()) {
     uint8_t type = usbMIDI.getType();
     uint8_t channel = usbMIDI.getChannel();
@@ -1279,6 +1278,7 @@ void loop() {
       // No serial output for performance
     }
   }
+#endif
 
 #ifdef USE_MIDI_HOST
   myusb.Task();
