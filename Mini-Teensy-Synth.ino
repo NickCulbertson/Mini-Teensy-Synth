@@ -46,6 +46,12 @@ const char* PROJECT_SUBTITLE = "6-Voice Poly";
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 #endif
 
+#ifdef USE_MIDI_HOST
+// USB Host MIDI device for external controllers
+USBHost myusb;
+MIDIDevice midi1(myusb);
+#endif
+
 // All 19 Mini-Teensy Encoders (using configurable pin definitions from config.h)
 Encoder enc1(ENC_1_CLK, ENC_1_DT);
 Encoder enc2(ENC_2_CLK, ENC_2_DT);
@@ -438,13 +444,42 @@ void OnPitchBend(byte channel, int bend) {
 }
 #endif
 
+#ifdef USE_MIDI_HOST
+// USB Host MIDI callback handlers
+void OnUSBHostNoteOn(byte channel, byte note, byte velocity) {
+  if (midiChannel != 0 && channel != midiChannel) return;
+  noteOn(note, velocity);
+}
+void OnUSBHostNoteOff(byte channel, byte note, byte velocity) {
+  if (midiChannel != 0 && channel != midiChannel) return;
+  noteOff(note);
+}
+void OnUSBHostControlChange(byte channel, byte number, byte value) {
+  if (midiChannel != 0 && channel != midiChannel) return;
+  if (number == 1) modWheelValue = value / 127.0;
+}
+void OnUSBHostPitchBend(byte channel, int bend) {
+  if (midiChannel != 0 && channel != midiChannel) return;
+  // USB Host MIDI uses signed range -8192 to +8191, center = 0
+  pitchWheelValue = bend / 8192.0;
+}
+#endif
+
 void setup() {
   Serial.begin(9600);
   AudioMemory(48); // Reduced from 60 to minimize latency
   
-  // If you are using the Teensy's MIDI Host connections enable USE_MIDI_HOST in config.
+  // USB Device MIDI is always enabled for DAW connection
+  Serial.println("USB Device MIDI enabled");
+
+  // Optionally initialize USB Host MIDI for external controllers
 #ifdef USE_MIDI_HOST
-  USBHost::begin();
+  myusb.begin();
+  midi1.setHandleNoteOn(OnUSBHostNoteOn);
+  midi1.setHandleNoteOff(OnUSBHostNoteOff);
+  midi1.setHandleControlChange(OnUSBHostControlChange);
+  midi1.setHandlePitchChange(OnUSBHostPitchBend);
+  Serial.println("USB Host MIDI also enabled");
 #endif
 
 #ifdef ENABLE_DIN_MIDI
@@ -1215,7 +1250,7 @@ void noteOff(int note) {
 }
 
 void loop() {
-  // Process ALL USB Device MIDI messages immediately for minimal latency
+  // Process USB Device MIDI messages (always enabled)
   while (usbMIDI.read()) {
     uint8_t type = usbMIDI.getType();
     uint8_t channel = usbMIDI.getChannel();
@@ -1244,6 +1279,11 @@ void loop() {
       // No serial output for performance
     }
   }
+
+#ifdef USE_MIDI_HOST
+  myusb.Task();
+  midi1.read();
+#endif
   
 #ifdef ENABLE_DIN_MIDI
   MIDI.read();
