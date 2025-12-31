@@ -30,6 +30,21 @@ const char* PROJECT_SUBTITLE = "6-Voice Poly";
 #include <Wire.h>
 #include <Encoder.h>
 
+// ============================================================================
+// MIDI Setup
+// ============================================================================
+
+#ifdef USE_MIDI_HOST
+USBHost myusb;
+USBHub hub1(myusb);
+MIDIDevice midi1(myusb);
+#endif
+
+#ifdef USE_DIN_MIDI
+#include <MIDI.h>
+MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
+#endif
+
 #ifdef USE_LCD_DISPLAY
   #include <LiquidCrystal_I2C.h>
 #endif
@@ -41,16 +56,6 @@ const char* PROJECT_SUBTITLE = "6-Voice Poly";
   #define OLED_RESET -1
 #endif
 
-#ifdef ENABLE_DIN_MIDI
-#include <MIDI.h>
-MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
-#endif
-
-#ifdef USE_MIDI_HOST
-// USB Host MIDI device for external controllers
-USBHost myusb;
-MIDIDevice midi1(myusb);
-#endif
 
 // All 19 Mini-Teensy Encoders (using configurable pin definitions from config.h)
 Encoder enc1(ENC_1_CLK, ENC_1_DT);
@@ -104,7 +109,15 @@ AudioMixer4              oscMix[VOICES]; // Mix 3 oscs + noise per voice
 AudioFilterLadder        filter1[VOICES]; // Filter per voice
 AudioEffectEnvelope      ampEnv[VOICES], filtEnv[VOICES]; // Envelopes per voice
 AudioMixer4              voiceMix1, voiceMix2, finalMix; // Mix voices together
-AudioOutputUSB           usb1;
+
+#ifdef USE_USB_AUDIO
+AudioOutputUSB           usb1;            // USB audio output (stereo)
+#endif
+
+#ifdef USE_TEENSY_DAC
+AudioOutputI2S           i2s1;            // I2S DAC output (Teensy Audio Shield)
+AudioControlSGTL5000     sgtl5000_1;
+#endif
 
 // Audio connections - Polyphonic chain
 // Voice 0 connections
@@ -182,11 +195,16 @@ AudioConnection patchCordMix6(filter1[5], 0, voiceMix2, 2);
 AudioConnection patchCordFinal1(voiceMix1, 0, finalMix, 0);
 AudioConnection patchCordFinal2(voiceMix2, 0, finalMix, 1);
 
-// Final mono output to both channels
-AudioConnection patchCordOut1(finalMix, 0, usb1, 0);
-AudioConnection patchCordOut2(finalMix, 0, usb1, 1);
-// AudioConnection patchCordOut3(finalMix, 0, i2s1, 0);
-// AudioConnection patchCordOut4(finalMix, 0, i2s1, 1);
+// Final output connections
+#ifdef USE_USB_AUDIO
+AudioConnection patchCordOut1(finalMix, 0, usb1, 0); // Left channel
+AudioConnection patchCordOut2(finalMix, 0, usb1, 1); // Right channel
+#endif
+
+#ifdef USE_TEENSY_DAC
+AudioConnection patchCordOut3(finalMix, 0, i2s1, 0); // Left channel
+AudioConnection patchCordOut4(finalMix, 0, i2s1, 1); // Right channel
+#endif
 
 // AudioControlSGTL5000     sgt15000_1;
 
@@ -223,6 +241,12 @@ float lastPitchWheelValue = 0.0; // Track changes to prevent unnecessary updates
 int midiChannel = 0; // MIDI channel (1-16, 0 = omni)
 unsigned long lastMidiTime = 0; // For MIDI throttling
 int playMode = 1; // 0=Mono, 1=Poly, 2=Legato
+
+// Display update tracking for MIDI CC changes
+int lastChangedParam = -1;
+float lastChangedValue = 0.0;
+String lastChangedName = "";
+bool parameterChanged = false;
 float glideTime = 0.0; // Glide/portamento time (0 = off, 0.1-1.0 = 100ms to 10s)
 int noiseType = 0; // 0 = White, 1 = Pink
 float targetFreq[VOICES]; // Target frequencies for glide
@@ -465,29 +489,212 @@ void OnUSBHostPitchBend(byte channel, int bend) {
 }
 #endif
 
+// ============================================================================
+// Centralized MIDI Handler
+// ============================================================================
+
+void processMidiMessage(byte type, byte channel, byte data1, byte data2) {
+  // Filter by MIDI channel (0 = omni, 1-16 = specific channel)
+  if (midiChannel != 0 && channel != midiChannel) return;
+  
+  switch (type) {
+    case 0x90: // Note On (or Note Off with velocity 0)
+      if (data2 > 0) {
+        noteOn(data1, data2);
+      } else {
+        noteOff(data1);
+      }
+      break;
+      
+    case 0x80: // Note Off
+      noteOff(data1);
+      break;
+      
+    case 0xB0: // Control Change
+      handleControlChange(data1, data2);
+      break;
+      
+    case 0xC0: // Program Change
+      handleProgramChange(data1);
+      break;
+      
+    case 0xE0: // Pitch Bend
+      {
+        int pitchBendValue = (data2 << 7) | data1; // Combine MSB and LSB
+        pitchWheelValue = (pitchBendValue - 8192) / 8192.0;
+      }
+      break;
+  }
+}
+
+void handleControlChange(int cc, int value) {
+  // Convert MIDI value (0-127) to parameter value (0.0-1.0)
+  float paramValue = value / 127.0;
+  
+  // Handle standard MIDI CCs first
+  if (cc == CC_MODWHEEL) {
+    modWheelValue = paramValue;
+    
+    // Track mod wheel change for display
+    if (!inMenu) {
+      lastChangedParam = -1;  // Special flag for non-parameter controls
+      lastChangedName = "Mod Wheel";
+      lastChangedValue = value;  // Use raw 0-127 value for display
+      parameterChanged = true;
+    }
+    return;  // Don't process as parameter - mod wheel has its own function
+  }
+  
+  // Handle Mini synthesizer parameter CCs
+  int paramIndex = -1;
+  
+  // if (cc == CC_OSC1_RANGE) paramIndex = 0;
+  // else if (cc == CC_OSC2_RANGE) paramIndex = 1;
+  // else if (cc == CC_OSC3_RANGE) paramIndex = 2;
+  // else if (cc == CC_OSC2_FINE) paramIndex = 3;
+  // else if (cc == CC_OSC3_FINE) paramIndex = 4;
+  // else if (cc == CC_OSC1_WAVE) paramIndex = 5;
+  // else if (cc == CC_OSC2_WAVE) paramIndex = 6;
+  // else if (cc == CC_OSC3_WAVE) paramIndex = 7;
+  // else if (cc == CC_OSC1_VOL) paramIndex = 8;
+  // else if (cc == CC_OSC2_VOL) paramIndex = 9;
+  // else if (cc == CC_OSC3_VOL) paramIndex = 10;
+  // else if (cc == CC_CUTOFF) paramIndex = 11;
+  // else if (cc == CC_RESONANCE) paramIndex = 12;
+  // else if (cc == CC_FILTER_ATTACK) paramIndex = 13;
+  // else if (cc == CC_FILTER_DECAY) paramIndex = 14;
+  // else if (cc == CC_FILTER_SUSTAIN) paramIndex = 15;
+  // else if (cc == CC_NOISE_VOL) paramIndex = 16;
+  // else if (cc == CC_AMP_ATTACK) paramIndex = 17;
+  // else if (cc == CC_AMP_SUSTAIN) paramIndex = 18;
+  // else if (cc == CC_AMP_DECAY) paramIndex = 19;
+  // else if (cc == CC_OSC1_FINE) paramIndex = 20;
+  // else if (cc == CC_FILTER_STRENGTH) paramIndex = 21;
+  // else if (cc == CC_LFO_RATE) paramIndex = 22;
+  // else if (cc == CC_LFO_DEPTH) paramIndex = 23;
+
+  if (cc == CC_1_PARAM) paramIndex = ENC_1_PARAM;   
+  else if (cc == CC_2_PARAM) paramIndex = ENC_2_PARAM; 
+  else if (cc == CC_3_PARAM) paramIndex = ENC_3_PARAM; 
+  else if (cc == CC_4_PARAM) paramIndex = ENC_4_PARAM; 
+  else if (cc == CC_5_PARAM) paramIndex = ENC_5_PARAM; 
+  else if (cc == CC_6_PARAM) paramIndex = ENC_6_PARAM; 
+  else if (cc == CC_7_PARAM) paramIndex = ENC_7_PARAM; 
+  else if (cc == CC_8_PARAM) paramIndex = ENC_8_PARAM;
+  else if (cc == CC_9_PARAM) paramIndex = ENC_9_PARAM;
+  else if (cc == CC_10_PARAM) paramIndex = ENC_10_PARAM;
+  else if (cc == CC_11_PARAM) paramIndex = ENC_11_PARAM;
+  else if (cc == CC_12_PARAM) paramIndex = MENU_ENCODER_PARAM;
+  else if (cc == CC_13_PARAM) paramIndex = ENC_13_PARAM;
+  else if (cc == CC_14_PARAM) paramIndex = ENC_14_PARAM;
+  else if (cc == CC_15_PARAM) paramIndex = ENC_15_PARAM;
+  else if (cc == CC_16_PARAM) paramIndex = ENC_16_PARAM;
+  else if (cc == CC_17_PARAM) paramIndex = ENC_17_PARAM;
+  else if (cc == CC_18_PARAM) paramIndex = ENC_18_PARAM;
+  else if (cc == CC_19_PARAM) paramIndex = ENC_19_PARAM;
+  else if (cc == CC_20_PARAM) paramIndex = ENC_20_PARAM;
+  else if (cc == CC_21_PARAM) paramIndex = ENC_21_PARAM;
+  else if (cc == CC_22_PARAM) paramIndex = ENC_22_PARAM;
+  else if (cc == CC_23_PARAM) paramIndex = ENC_23_PARAM; 
+  
+  // Update parameter if mapped
+  if (paramIndex >= 0) {
+    allParameterValues[paramIndex] = paramValue;
+    updateParameterFromMenu(paramIndex, paramValue);
+    
+    // Track parameter change for display
+    if (!inMenu) {
+      lastChangedParam = paramIndex;
+      lastChangedValue = paramValue;
+      lastChangedName = controlNames[paramIndex];
+      parameterChanged = true;
+    }
+  }
+}
+
+void handleProgramChange(int program) {
+  if (program >= 0 && program < NUM_PRESETS) {
+    loadPreset(program);
+    Serial.print("Program change to preset: ");
+    Serial.println(program);
+  }
+}
+
+void updateParameterDisplay(int paramIndex, float val) {
+  String line1 = controlNames[paramIndex];
+  String line2 = "";
+  
+  if (paramIndex >= 5 && paramIndex <= 7) { // Waveform controls
+    int waveIndex = getWaveformIndex(val, (paramIndex == 5) ? 1 : ((paramIndex == 6) ? 2 : 3));
+    line2 = waveformNames[waveIndex];
+  }
+  else if (paramIndex >= 0 && paramIndex <= 2) { // Range controls
+    int rangeIndex = getRangeIndex(val);
+    line2 = rangeNames[rangeIndex];
+  }
+  else if (paramIndex == 3 || paramIndex == 4 || paramIndex == 20) { // Fine tuning controls
+    if (val <= 0.25) {
+      float semiRange = val / 0.25;
+      int semitones = (int)(-12 + (semiRange * 11)); // -12 to -1
+      line2 = String(semitones) + "st";
+    } else if (val >= 0.75) {
+      float semiRange = (val - 0.75) / 0.25;
+      int semitones = (int)(1 + (semiRange * 11)); // +1 to +12
+      line2 = "+" + String(semitones) + "st";
+    } else {
+      int cents = (int)((val - 0.5) * 100); // -25 to +25 cents
+      line2 = (cents >= 0 ? "+" : "") + String(cents) + "c";
+    }
+  }
+  else if (paramIndex == 22) { // LFO Rate
+    float hz = 0.1 + (val * 19.9); // 0.1 to 20 Hz
+    line2 = String(hz, 1) + " Hz";
+  }
+  else {
+    int displayValue = (int)(val * 127); // 0-127 scale
+    line2 = String(displayValue);
+  }
+  
+  displayText(line1, line2);
+}
+
 void setup() {
   Serial.begin(9600);
-  AudioMemory(48); // Reduced from 60 to minimize latency
+  AudioMemory(48);
   
+#ifdef USE_TEENSY_DAC
+  sgtl5000_1.enable();
+  sgtl5000_1.volume(0.8);
+  Serial.println("Teensy Audio Shield initialized");
+#endif
 
-  // Optionally initialize USB Host MIDI for external controllers
 #ifdef USE_MIDI_HOST
   myusb.begin();
-  midi1.setHandleNoteOn(OnUSBHostNoteOn);
-  midi1.setHandleNoteOff(OnUSBHostNoteOff);
-  midi1.setHandleControlChange(OnUSBHostControlChange);
-  midi1.setHandlePitchChange(OnUSBHostPitchBend);
-  Serial.println("USB Host MIDI also enabled");
+  Serial.println("USB Host MIDI initialized");
 #endif
 
-#ifdef ENABLE_DIN_MIDI
-  // Initialize DIN MIDI
+#ifdef USE_DIN_MIDI
   MIDI.begin(MIDI_CHANNEL_OMNI);
-  MIDI.setHandleNoteOn(OnNoteOn);
-  MIDI.setHandleNoteOff(OnNoteOff);
-  MIDI.setHandleControlChange(OnControlChange);
-  MIDI.setHandlePitchBend(OnPitchBend);
+  MIDI.setHandleNoteOn([](byte channel, byte note, byte velocity) {
+    processMidiMessage(0x90, channel, note, velocity);
+  });
+  MIDI.setHandleNoteOff([](byte channel, byte note, byte velocity) {
+    processMidiMessage(0x80, channel, note, velocity);
+  });
+  MIDI.setHandleControlChange([](byte channel, byte cc, byte value) {
+    processMidiMessage(0xB0, channel, cc, value);
+  });
+  MIDI.setHandleProgramChange([](byte channel, byte program) {
+    processMidiMessage(0xC0, channel, program, 0);
+  });
+  MIDI.setHandlePitchBend([](byte channel, int bend) {
+    byte data1 = bend & 0x7F;       // LSB
+    byte data2 = (bend >> 7) & 0x7F; // MSB
+    processMidiMessage(0xE0, channel, data1, data2);
+  });
+  Serial.println("DIN MIDI initialized");
 #endif
+
   
   // Initialize LFO
   lfo.frequency(lfoRate);
@@ -599,6 +806,16 @@ void setup() {
     
 // sgt15000_1.enable();
 //     sgt15000_1.volume(1);
+
+  Serial.println("Mini-Teensy Synth initialized");
+  Serial.println("Parameters: 31 synthesizer parameters");
+  
+#ifdef USE_USB_AUDIO
+  Serial.println("Audio output: USB Audio");
+#endif
+#ifdef USE_TEENSY_DAC
+  Serial.println("Audio output: Teensy Audio Shield (I2S)");
+#endif
 
   delay(2000);
   updateDisplay();
@@ -1248,44 +1465,25 @@ void noteOff(int note) {
 }
 
 void loop() {
-  // Process USB Device MIDI messages (if enabled)
+  // Handle USB Device MIDI
 #ifdef USE_USB_DEVICE_MIDI
   while (usbMIDI.read()) {
-    uint8_t type = usbMIDI.getType();
-    uint8_t channel = usbMIDI.getChannel();
-    uint8_t data1 = usbMIDI.getData1();
-    uint8_t data2 = usbMIDI.getData2();
-    
-    // Filter by MIDI channel (0 = omni mode, receive all channels)
-    if (midiChannel != 0 && channel != midiChannel) {
-      continue; // Skip messages not on our channel
-    }
-    
-    if (type == usbMIDI.NoteOn && data2 > 0) {
-      noteOn(data1, data2);
-    } else if (type == usbMIDI.NoteOff || (type == usbMIDI.NoteOn && data2 == 0)) {
-      noteOff(data1);
-    } else if (type == usbMIDI.ControlChange) {
-      // Handle MIDI Control Change messages
-      if (data1 == 1) { // Mod wheel (CC#1)
-        modWheelValue = data2 / 127.0; // Convert to 0.0-1.0 range
-        // No serial output for performance
-      }
-    } else if (type == usbMIDI.PitchBend) {
-      // Handle pitch wheel (14-bit value)
-      int pitchBendValue = (data2 << 7) | data1; // Combine MSB and LSB
-      pitchWheelValue = (pitchBendValue - 8192) / 8192.0; // Convert to -1.0 to +1.0 range
-      // No serial output for performance
-    }
+    processMidiMessage(usbMIDI.getType(), usbMIDI.getChannel(), 
+                      usbMIDI.getData1(), usbMIDI.getData2());
   }
 #endif
 
+  // Handle USB Host MIDI
 #ifdef USE_MIDI_HOST
   myusb.Task();
-  midi1.read();
+  while (midi1.read()) {
+    processMidiMessage(midi1.getType(), midi1.getChannel(), 
+                      midi1.getData1(), midi1.getData2());
+  }
 #endif
-  
-#ifdef ENABLE_DIN_MIDI
+
+  // Handle DIN MIDI
+#ifdef USE_DIN_MIDI
   MIDI.read();
 #endif
   
@@ -1294,12 +1492,18 @@ void loop() {
   updateLFOModulation();
   updateGlide();
   
-  // Minimal serial input check for performance
-  if (Serial.available()) {
-    char input = Serial.read();
-    if (input == 'r' || input == 'R') {
-      resetEncoderBaselines();
+  // Update display if parameter changed during this loop iteration
+  if (parameterChanged && !inMenu) {
+    if (lastChangedParam >= 0) {
+      // Use the specialized display function for Mini-Teensy
+      updateParameterDisplay(lastChangedParam, lastChangedValue);
+    } else {
+      // For mod wheel and other non-parameter controls
+      String line2 = String((int)lastChangedValue);
+      displayText(lastChangedName, line2);
     }
+    parameterChanged = false;
   }
+  
   delay(5); // Reduced delay for better responsiveness
 }

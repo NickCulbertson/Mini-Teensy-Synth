@@ -41,6 +41,7 @@ extern int noiseType;
 extern bool lfoEnabled;
 extern int lfoTarget;
 extern int currentPreset;
+extern bool parameterChanged;
 extern float osc1Range, osc2Range, osc3Range;
 const char* parentMenuItems[] = {"Presets", "Oscillator 1", "Oscillator 2", "Oscillator 3", "Noise", "Envelopes", "Filter", "LFO", "Voice Mode", "Settings", "< Exit"};
 const char* oscMenuItems[] = {"Range", "Waveform", "Volume", "Fine Tune", "< Back"};
@@ -229,11 +230,15 @@ void updateDisplay() {
           break;
       }
     }
+    displayText(line1, line2);
   } else {
-    line1 = "MiniTeensy";
-    line2 = "Press for menu";
+    // Only show default message if no parameter was recently changed via MIDI
+    if (!parameterChanged) {
+      line1 = "MiniTeensy";
+      line2 = "Press for menu";
+      displayText(line1, line2);
+    }
   }
-  displayText(line1, line2);
 }
 
 int getParameterIndex(MenuState state) {
@@ -802,7 +807,7 @@ void loadPreset(int presetIndex) {
 
 void updateParameterFromMenu(int paramIndex, float val) {
   updateSynthParameter(paramIndex, val);
-  updateDisplay();
+  // Display update removed - now handled once per loop in main()
 }
 
 void updateEncoderParameter(int paramIndex, int change) {

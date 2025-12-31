@@ -2,7 +2,25 @@
 #define CONFIG_H
 
 // ============================================================================
-// Hardware Configuration Template
+// Preferences - Mini-Teensy Synth
+// ============================================================================
+
+// • DISPLAY TYPE
+// Display Configuration (Choose ONE - comment out the other)
+#define USE_LCD_DISPLAY
+// #define USE_OLED_DISPLAY
+
+// • MIDI TYPE
+#define USE_USB_DEVICE_MIDI // USB Device MIDI for DAW/computer connection (default)
+#define USE_MIDI_HOST       // USB Host MIDI for external controllers connected to Teensy 
+// #define USE_DIN_MIDI // DIN MIDI support - UNTESTED (requires moving enc3 from pin 0) 
+
+// • AUDIO TYPE
+// #define USE_TEENSY_DAC        // Use Teensy Audio Shield or other I2S DAC
+#define USE_USB_AUDIO      // Use USB Audio output (default)
+
+// ============================================================================
+// Hardware Configuration - Multi-Teensy Standard Layout
 // ============================================================================
 
 // Menu Encoder Pin Assignments
@@ -53,80 +71,67 @@
 #define ENC_20_CLK   40     // enc20 pins
 #define ENC_20_DT    39
 
-// ORIGINAL MINI-TEENSY ENCODER MAPPING (exactly as it was before)
-// Array index = parameter index, encoder reading directly maps to parameter
-#define ENC_1_PARAM    0   // OSC1_RANGE      // enc1 (pins 4,5) → Osc1 Range
-#define ENC_2_PARAM    1   // OSC2_RANGE      // enc2 (pins 2,3) → Osc2 Range  
-#define ENC_3_PARAM    2   // OSC3_RANGE      // enc3 (pins 0,1) → Osc3 Range
-#define ENC_4_PARAM    3   // OSC2_FINE       // enc4 (pins 8,9) → Osc2 Fine
-#define ENC_5_PARAM    4   // OSC3_FINE       // enc5 (pins 6,7) → Osc3 Fine
-#define ENC_6_PARAM    5   // OSC1_WAVE       // enc6 (pins 25,27) → Osc1 Wave
-#define ENC_7_PARAM    6   // OSC2_WAVE       // enc7 (pins 12,24) → Osc2 Wave
-#define ENC_8_PARAM    7   // OSC3_WAVE       // enc8 (pins 10,11) → Osc3 Wave
-#define ENC_9_PARAM    8   // OSC1_VOLUME     // enc9 (pins 29,30) → Osc1 Volume
-#define ENC_10_PARAM   9   // OSC2_VOLUME     // enc10 (pins 28,26) → Osc2 Volume
-#define ENC_11_PARAM   10  // OSC3_VOLUME     // enc11 (pins 21,20) → Osc3 Volume
-#define ENC_13_PARAM   12  // RESONANCE       // enc13 (pins 34,33) → Resonance
-#define ENC_14_PARAM   13  // FILTER_ATTACK   // enc14 (pins 50,41) → Filter Attack
-#define ENC_15_PARAM   14  // FILTER_DECAY    // enc15 (pins 23,22) → Filter Decay/Release
-#define ENC_16_PARAM   15  // FILTER_SUSTAIN  // enc16 (pins 36,35) → Filter Sustain
-#define ENC_17_PARAM   16  // NOISE_VOLUME    // enc17 (pins 31,32) → Noise Volume
-#define ENC_18_PARAM   17  // AMP_ATTACK      // enc18 (pins 17,16) → Amp Attack
-#define ENC_19_PARAM   18  // AMP_SUSTAIN     // enc19 (pins 38,37) → Amp Sustain
-#define ENC_20_PARAM   19  // AMP_DECAY       // enc20 (pins 40,39) → Amp Decay
 
-// Menu-only parameters (20-30) - now mappable to knobs:
-//   - 11: Cutoff
-//   - 20: Osc1 Fine (extended fine tuning like Osc2/3)
-//   - 21: Filter Strength (filter envelope amount)
-//   - 22: LFO Rate (0.1 - 20 Hz)
-//   - 23: LFO Depth (0-100%)
-//   - 24: LFO Toggle (on/off)
-//   - 25: LFO Target (Pitch/Filter/Amp)
-//   - 26: Play Mode (Mono/Poly/Legato)
-//   - 27: Glide Time (portamento speed)
-//   - 28: Noise Type (White/Pink)
-//   - 29: Macro Mode (toggles macro assignments)
-//   - 30: MIDI Channel (Omni/1-16)
+// Standard MIDI CCs (shared across all projects)
+#define CC_MODWHEEL      1    // Standard mod wheel
+#define CC_VOLUME        7    // Standard volume control
+#define CC_SUSTAIN       64   // Standard sustain pedal
+
+
+#define CC_1_PARAM       -1 // OSC1_RANGE
+#define CC_2_PARAM       -1 // OSC2_RANGE
+#define CC_3_PARAM       -1 // OSC3_RANGE
+#define CC_4_PARAM       -1 // OSC2_FINE
+#define CC_5_PARAM       -1 // OSC3_FINE
+#define CC_6_PARAM       -1 // OSC1_WAVE
+#define CC_7_PARAM       -1 // OSC2_WAVE
+#define CC_8_PARAM       -1 // OSC3_WAVE
+#define CC_9_PARAM       -1 // OSC1_VOLUME
+#define CC_10_PARAM      -1 // OSC2_VOLUME
+#define CC_11_PARAM      -1 // OSC3_VOLUME
+#define CC_12_PARAM      74 // CUTOFF
+#define CC_13_PARAM      71 // RESONANCE
+#define CC_14_PARAM      80 // FILTER_ATTACK
+#define CC_15_PARAM      81 // FILTER_DECAY/RELEASE
+#define CC_16_PARAM      82 // FILTER_SUSTAIN
+#define CC_17_PARAM      -1 // NOISE_VOLUME
+#define CC_18_PARAM      73 // AMP_ATTACK
+#define CC_19_PARAM      79 // AMP_SUSTAIN
+#define CC_20_PARAM      75 // AMP_DECAY
+#define CC_21_PARAM      -1 // AMP_ATTACK
+#define CC_22_PARAM      -1 // AMP_SUSTAIN
+#define CC_23_PARAM      -1 // AMP_DECAY
+
+// Mini Encoder Mapping
+#define ENC_1_PARAM    0   // OSC1_RANGE
+#define ENC_2_PARAM    1   // OSC2_RANGE
+#define ENC_3_PARAM    2   // OSC3_RANGE
+#define ENC_4_PARAM    3   // OSC2_FINE
+#define ENC_5_PARAM    4   // OSC3_FINE
+#define ENC_6_PARAM    5   // OSC1_WAVE
+#define ENC_7_PARAM    6   // OSC2_WAVE
+#define ENC_8_PARAM    7   // OSC3_WAVE
+#define ENC_9_PARAM    8   // OSC1_VOLUME
+#define ENC_10_PARAM   9   // OSC2_VOLUME
+#define ENC_11_PARAM   10  // OSC3_VOLUME
+#define ENC_13_PARAM   12  // RESONANCE
+#define ENC_14_PARAM   13  // FILTER_ATTACK
+#define ENC_15_PARAM   14  // FILTER_DECAY/RELEASE
+#define ENC_16_PARAM   15  // FILTER_SUSTAIN
+#define ENC_17_PARAM   16  // NOISE_VOLUME
+#define ENC_18_PARAM   17  // AMP_ATTACK
+#define ENC_19_PARAM   18  // AMP_SUSTAIN
+#define ENC_20_PARAM   19  // AMP_DECAY
+#define ENC_21_PARAM   22  // LFO_Rate
+#define ENC_22_PARAM   23  // LFO_Depth
+#define ENC_23_PARAM   25  // LFO_Target
+
+// Menu Encoder Configuration
+#define MENU_ENCODER_PARAM  11  // CUTOFF
 
 // ============================================================================
-// Menu Encoder Parameter Configuration
+// DIN MIDI Configuration (UNTESTED)
 // ============================================================================
-// Set which parameter the menu encoder controls when NOT in menu mode
-// Use -1 for menu-only mode (turning encoder auto-enters menu, no button press needed)
-// Available parameters: 0-30 (see list above) 
-#define MENU_ENCODER_PARAM  11  // Cutoff (traditional - button press to enter menu)
-
-// EXAMPLES:
-// #define MENU_ENCODER_PARAM  11  // Cutoff (traditional - button press to enter menu)
-// #define MENU_ENCODER_PARAM  22  // LFO Rate (button press to enter menu)
-// #define MENU_ENCODER_PARAM  21  // Filter Strength (button press to enter menu) 
-// #define MENU_ENCODER_PARAM  -1  // Menu-only (turn encoder to auto-enter menu)
-
-
-// Display Configuration (Choose ONE - comment out the other)
-#define USE_LCD_DISPLAY
-// #define USE_OLED_DISPLAY
-
-// MIDI Configuration - Enable the MIDI sources you want to use
-#define USE_USB_DEVICE_MIDI // USB Device MIDI for DAW/computer connection (default)
-// #define USE_MIDI_HOST       // USB Host MIDI for external controllers connected to Teensy 
-
-/*
- * EXAMPLE: DIN MIDI Pin Conflict Resolution
- * 
- * If you enable DIN MIDI, it uses pin 0 (Serial1 RX), which conflicts with ENC_3_CLK.
- * To resolve this, move enc3 to a different pin pair:
- * 
- * #define ENC_3_CLK    42     // Move enc3 to surface mount pins
- * #define ENC_3_DT     43     // (or any other available pins)
- * 
- * Then enable DIN MIDI below.
- */
-
-// TODO: Test DIN MIDI
-// Uncomment to enable DIN MIDI support (requires moving enc3 from pin 0)
-// #define ENABLE_DIN_MIDI
 
 /*
  * DIN MIDI Setup Instructions:
@@ -144,8 +149,9 @@
  * 
  * USAGE:
  * - Install "MIDI Library" by Francois Best via Arduino Library Manager
- * - Uncomment #define ENABLE_DIN_MIDI above
- * - Supports both USB and DIN MIDI simultaneously
+ * - Uncomment #define USE_DIN_MIDI above
+ * - Can work with both USB Device MIDI (default) and USB Host MIDI
+ * - Supports USB and DIN MIDI simultaneously
  * - Uses same MIDI channel setting from Settings menu
  * - Receives Note On/Off, Control Change, and Pitch Bend
  */
