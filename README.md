@@ -27,7 +27,7 @@ Video: [**DIY Minimoog Inspired Synth | A Teensy Powered Tribute**](https://yout
 - **Added MIDI Host Support**
 - **Added MIDICC Support**
 
-BREAKING CHANGE (December 2025)
+BREAKING CHANGE
 **Menu encoder pin assignments changed** to fix encoder timing issues:
 - **Menu Encoder CLK**: Pin 13 → **Pin 14**
 - **Menu Encoder DT**: Pin 14 → **Pin 15**  
