@@ -3,16 +3,6 @@
  * A 6-voice polyphonic virtual analog synthesizer built with the Teensy 4.1 microcontroller, 
  * inspired by the classic Minimoog. Features comprehensive synthesis with USB audio/MIDI 
  * and intuitive menu control.
- * 
- * REQUIRED LIBRARIES (install via Arduino Library Manager):
- * - LiquidCrystal I2C (by Frank de Brabander) - for LCD display
- * - Adafruit SSD1306 (by Adafruit) - for OLED display  
- * - Adafruit GFX Library (by Adafruit) - for OLED display
- * - Encoder (by Paul Stoffregen) 
- * - MIDI Library (by Francois Best) - only needed if enabling DIN MIDI
- * 
- * Built-in Teensy libraries (no installation needed):
- * - Audio, Wire, USBHost_t36
  */
 
 #define NUM_PARAMETERS 31
@@ -30,9 +20,6 @@ const char* PROJECT_SUBTITLE = "6-Voice Poly";
 #include <Wire.h>
 #include <Encoder.h>
 
-// ============================================================================
-// MIDI Setup
-// ============================================================================
 
 #ifdef USE_MIDI_HOST
 USBHost myusb;
@@ -208,7 +195,6 @@ AudioConnection patchCordOut4(finalMix, 0, i2s1, 1); // Right channel
 
 // AudioControlSGTL5000     sgt15000_1;
 
-// ===== SYNTH PARAMETERS =====
 struct PolyVoice {
   int note;
   bool active;
@@ -489,9 +475,6 @@ void OnUSBHostPitchBend(byte channel, int bend) {
 }
 #endif
 
-// ============================================================================
-// Centralized MIDI Handler
-// ============================================================================
 
 void processMidiMessage(byte type, byte channel, byte data1, byte data2) {
   // Filter by MIDI channel (0 = omni, 1-16 = specific channel)
@@ -536,12 +519,10 @@ void handleControlChange(int cc, int value) {
     modWheelValue = paramValue;
     
     // Track mod wheel change for display
-    if (!inMenu) {
-      lastChangedParam = -1;  // Special flag for non-parameter controls
-      lastChangedName = "Mod Wheel";
-      lastChangedValue = value;  // Use raw 0-127 value for display
-      parameterChanged = true;
-    }
+    lastChangedParam = -1;  // Special flag for non-parameter controls
+    lastChangedName = "Mod Wheel";
+    lastChangedValue = value;  // Use raw 0-127 value for display
+    parameterChanged = true;
     return;  // Don't process as parameter - mod wheel has its own function
   }
   
@@ -603,12 +584,10 @@ void handleControlChange(int cc, int value) {
     updateParameterFromMenu(paramIndex, paramValue);
     
     // Track parameter change for display
-    if (!inMenu) {
-      lastChangedParam = paramIndex;
-      lastChangedValue = paramValue;
-      lastChangedName = controlNames[paramIndex];
-      parameterChanged = true;
-    }
+    lastChangedParam = paramIndex;
+    lastChangedValue = paramValue;
+    lastChangedName = controlNames[paramIndex];
+    parameterChanged = true;
   }
 }
 
@@ -617,6 +596,11 @@ void handleProgramChange(int program) {
     loadPreset(program);
     Serial.print("Program change to preset: ");
     Serial.println(program);
+    
+    // Update display to show preset name
+    String line1 = "Preset " + String(program + 1);
+    String line2 = String(getPresetName(program));
+    displayText(line1, line2);
   }
 }
 
@@ -659,7 +643,7 @@ void updateParameterDisplay(int paramIndex, float val) {
 }
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   AudioMemory(48);
   
 #ifdef USE_TEENSY_DAC
@@ -1493,7 +1477,12 @@ void loop() {
   updateGlide();
   
   // Update display if parameter changed during this loop iteration
-  if (parameterChanged && !inMenu) {
+  if (parameterChanged) {
+    // If we were in menu mode, exit menu to show MIDI parameter
+    if (inMenu) {
+      inMenu = false;
+    }
+    
     if (lastChangedParam >= 0) {
       // Use the specialized display function for Mini-Teensy
       updateParameterDisplay(lastChangedParam, lastChangedValue);
