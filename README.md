@@ -39,6 +39,8 @@ BREAKING CHANGE
 
 ## Hardware Requirements
 
+**NOTE: ENABLE YOUR HARDWARE SETUP IN CONFIG.H** - You can build this with no additional components if you use USB audio and USB MIDI. Params are changed with MIDICC and you can change preset with Program Changes.
+
 **Full Build:**
 - **Teensy 4.1** microcontroller  
 - **19x Rotary Encoders** + **1x Menu Encoder** with push button
