@@ -258,3 +258,6 @@ Fork, test on hardware, submit PR. Open source project!
 - **PJRC** - Teensy platform and Audio Library
 - **Minimoog** - The OG
 - **Open source community**
+
+---
+*This project was developed with assistance from [Claude Code](https://code.claude.com/docs/en/overview).*
