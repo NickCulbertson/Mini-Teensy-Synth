@@ -31,9 +31,9 @@ BREAKING CHANGE
 **Menu encoder pin assignments changed** to fix encoder timing issues:
 - **Menu Encoder CLK**: Pin 13 → **Pin 14**
 - **Menu Encoder DT**: Pin 14 → **Pin 15**  
-- **Menu Encoder SW**: Pin 15 → **Pin 13**
+- **Menu Encoder SW**: Pin 15 → **Pin 16**
 
-**For existing builds:** Swap CLK wire from pin 13 to pin 14, and SW wire from pin 15 to pin 13.
+**For existing builds:** Swap CLK wire from pin 13 to pin 14, and SW wire from pin 15 to pin 16. Move enc18 DT (Amp Attack) encoder from pin 16 to 51 (under the Teensy).
 
 **Need the old version?** Use [v1.0 release](../../releases/tag/v1.0) for original pin assignments.
 
@@ -78,10 +78,10 @@ If using the Teensy's MIDI Host enable `USE_MIDI_HOST` in config.
     │  7  │ enc5 DT  (Osc2 Fine)             │ 19  │ SCL (LCD I2C) LCD Clock
     │  8  │ enc4 CLK (Osc1 Fine)             │ 18  │ SDA (LCD I2C) LCD Data
     │  9  │ enc4 DT  (Osc1 Fine)             │ 17  │ enc18 CLK (Amp Attack)
-    │ 10  │ enc8 CLK (Osc3 Wave)             │ 16  │ enc18 DT  (Amp Attack)
+    │ 10  │ enc8 CLK (Osc3 Wave)             │ 16  │ Menu Encoder SW (Push Button)
     │ 11  │ enc8 DT  (Osc3 Wave)             │ 15  │ Menu Encoder DT (Filter Cutoff when not in menu)
     │ 12  │ enc7 CLK (Osc2 Wave)             │ 14  │ Menu Encoder CLK (Filter Cutoff when not in menu)
-    └─────┘                                  │ 13  │ Menu Encoder SW (Push Button)
+    └─────┘                                  │ 13  │ Blank (LED Pin)
                                              └─────┘
     │ 24  │ enc7 DT  (Osc2 Wave)             │ 41  │ enc14 DT  (Filter Attack/LFO Rate)
     │ 25  │ enc6 CLK (Osc1 Wave)             │ 40  │ enc20 CLK (Amp Sustain)
@@ -94,7 +94,7 @@ If using the Teensy's MIDI Host enable `USE_MIDI_HOST` in config.
     │ 32  │ enc17 DT (Noise Volume)          │ 33  │ enc13 DT  (Filter Resonance)
     └─────┘                                  │     │
                                              │ 50  │ enc14 CLK (Filter Attack/LFO Rate) (Under the Teensy)
-                                             │ 51  │
+                                             │ 51  │ enc18 DT  (Amp Attack)             (Under the Teensy)
                                              │ 52  │
                                              └─────┘
 ```
@@ -106,7 +106,7 @@ Perfect for testing or easier builds:
 ```
 Menu Encoder Pin    →  Teensy 4.1 Pin    │  Function
 ─────────────────────────────────────────┼─────────────
-SW (Push Button)    →  13                │  Menu Select
+SW (Push Button)    →  16                │  Menu Select
 CLK                 →  14                │  Rotary Clock
 DT                  →  15                │  Rotary Data  
 VCC                 →  3.3V              │  Power (3.3V)
@@ -145,13 +145,13 @@ Osc3 Waveform       │  enc8   │   10    │   11    │ Triangle, Sawtooth, 
 Osc1 Volume         │  enc9   │   29    │   30    │ Mixer level control
 Osc2 Volume         │ enc10   │   28    │   26    │ Mixer level control  
 Osc3 Volume         │ enc11   │   21    │   20    │ Mixer level control
-Menu Navigation     │ menu    │   14    │   15    │ Main interface (SW→13) / Filter Cutoff when not in menu
+Menu Navigation     │ menu    │   14    │   15    │ Main interface (SW→16) / Filter Cutoff when not in menu
 Filter Resonance    │ enc13   │   34    │   33    │ Resonance Q factor
 Filter Envelope Amt │ enc14   │   50    │   41    │ Attack / LFO Rate*
 Filter Decay        │ enc15   │   23    │   22    │ Decay / LFO Depth*
 Filter Sustain      │ enc16   │   36    │   35    │ Sustain / LFO Target*
 Noise Volume        │ enc17   │   31    │   32    │ White/Pink noise mix level
-Amp Attack          │ enc18   │   17    │   16    │ Envelope attack time
+Amp Attack          │ enc18   │   17    │   51    │ Envelope attack time
 Amp Decay           │ enc19   │   38    │   37    │ Envelope decay time
 Amp Sustain         │ enc20   │   40    │   39    │ Envelope sustain level
 ```

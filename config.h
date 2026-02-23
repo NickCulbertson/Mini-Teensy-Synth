@@ -29,8 +29,8 @@
 
 // • MIDI TYPE
 #define USE_USB_DEVICE_MIDI // USB Device MIDI for DAW/computer connection (default)
-#define USE_MIDI_HOST       // USB Host MIDI for external controllers connected to Teensy 
-// #define USE_DIN_MIDI // DIN MIDI support - UNTESTED (requires moving enc3 from pin 0) 
+//#define USE_MIDI_HOST       // USB Host MIDI for external controllers connected to Teensy
+// #define USE_DIN_MIDI // DIN MIDI support - UNTESTED (requires moving enc3 from pin 0)
 
 // • AUDIO TYPE
 // #define USE_TEENSY_DAC        // Use Teensy Audio Shield or other I2S DAC
@@ -43,7 +43,7 @@
 // Menu Encoder Pin Assignments
 #define MENU_ENCODER_CLK 14
 #define MENU_ENCODER_DT 15  
-#define MENU_ENCODER_SW 13
+#define MENU_ENCODER_SW 16
 
 // ============================================================================
 // Encoder Pin Definitions (Mini-Teensy Standard Layout)
@@ -83,7 +83,7 @@
 #define ENC_17_CLK   31     // enc17 pins
 #define ENC_17_DT    32
 #define ENC_18_CLK   17     // enc18 pins
-#define ENC_18_DT    16
+#define ENC_18_DT    51
 #define ENC_19_CLK   38     // enc19 pins
 #define ENC_19_DT    37
 #define ENC_20_CLK   40     // enc20 pins
