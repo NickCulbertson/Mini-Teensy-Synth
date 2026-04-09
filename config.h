@@ -29,7 +29,7 @@
 
 // • MIDI TYPE
 #define USE_USB_DEVICE_MIDI // USB Device MIDI for DAW/computer connection (default)
-//#define USE_MIDI_HOST       // USB Host MIDI for external controllers connected to Teensy
+#define USE_MIDI_HOST       // USB Host MIDI for external controllers connected to Teensy
 // #define USE_DIN_MIDI // DIN MIDI support - UNTESTED (requires moving enc3 from pin 0)
 
 // • AUDIO TYPE
