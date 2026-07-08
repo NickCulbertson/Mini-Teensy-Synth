@@ -54,6 +54,7 @@ const char* settingsMenuItems[] = {"Macro Knobs", "MIDI Channel", "< Back"};
 extern long encoderValues[];
 extern long lastEncoderValues[];
 extern Encoder menuEncoder;
+extern Encoder presetEncoder;
 extern Encoder enc1, enc2, enc3, enc4, enc5, enc6, enc7, enc8, enc9, enc10, enc11, enc13, enc14, enc15, enc16, enc17, enc18, enc19, enc20;
 extern void updateSynthParameter(int paramIndex, float val);
 extern int getWaveformIndex(float val, int osc);
@@ -366,84 +367,21 @@ void handleEncoder() {
     }
     oldMenuValue = newMenuValue;
   }
-  
-  static bool lastButtonState = HIGH;
-  static unsigned long lastPressTime = 0;
-  
-  bool currentButtonState = digitalRead(MENU_ENCODER_SW);
-  unsigned long now = millis();
-  
-  // Simple debouncing: only register press if enough time has passed since last press
-  if (currentButtonState == LOW && lastButtonState == HIGH && (now - lastPressTime) > 50) {
-    lastPressTime = now;
-    
-    if (!inMenu) {
-      inMenu = true;
-      currentMenuState = PARENT_MENU;
-      menuIndex = 0;
-      inPresetBrowse = false;
-      printCurrentPresetValues();
-      updateDisplay();
-    } else if (inPresetBrowse) {
-      if (presetBrowseIndex == NUM_PRESETS) {
-        inPresetBrowse = false;
-      } else {
-        loadPreset(presetBrowseIndex);
-      }
-      updateDisplay();
-    } else {
-      if (getParameterIndex(currentMenuState) >= 0) {
-        backMenuAction();
-      } else if (currentMenuState == MACRO_KNOBS) {
-        macroMode = !macroMode;
-      } else {
-        navigateMenuForward();
-      }
-      updateDisplay();
-    }
-  }
-  
-  lastButtonState = currentButtonState;
-}
 
-// Fast button-only check (can be called more frequently)
-void checkEncoderButton() {
-  static bool lastButtonState = HIGH;
-  static unsigned long lastPressTime = 0;
-  
-  bool currentButtonState = digitalRead(MENU_ENCODER_SW);
-  unsigned long now = millis();
-  
-  // Simple debouncing: only register press if enough time has passed since last press
-  if (currentButtonState == LOW && lastButtonState == HIGH && (now - lastPressTime) > 50) {
-    lastPressTime = now;
-    
-    if (!inMenu) {
-      inMenu = true;
-      currentMenuState = PARENT_MENU;
-      menuIndex = 0;
-      inPresetBrowse = false;
-      printCurrentPresetValues();
-      updateDisplay();
-    } else if (inPresetBrowse) {
-      if (presetBrowseIndex == NUM_PRESETS) {
-        inPresetBrowse = false;
-      } else {
-        loadPreset(presetBrowseIndex);
-      }
-      updateDisplay();
+  // Preset encoder: rotate-only, no click needed - each detent loads the next/previous preset immediately
+  long newPresetValue = presetEncoder.read() / 2;
+  static long oldPresetValue = 0;
+  if (newPresetValue != oldPresetValue) {
+    if (newPresetValue > oldPresetValue) {
+      currentPreset++;
+      if (currentPreset >= NUM_PRESETS) currentPreset = 0;
     } else {
-      if (getParameterIndex(currentMenuState) >= 0) {
-        backMenuAction();
-      } else if (currentMenuState == MACRO_KNOBS) {
-        macroMode = !macroMode;
-      } else {
-        navigateMenuForward();
-      }
-      updateDisplay();
+      currentPreset--;
+      if (currentPreset < 0) currentPreset = NUM_PRESETS - 1;
     }
+    loadPreset(currentPreset);
+    oldPresetValue = newPresetValue;
   }
-  lastButtonState = currentButtonState;
 }
 
 void navigateMenuForward() {

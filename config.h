@@ -24,7 +24,7 @@
 
 // • DISPLAY TYPE
 // Display Configuration (Choose ONE - comment out the other)
-#define USE_LCD_DISPLAY
+// #define USE_LCD_DISPLAY // No LCD wired on this build
 // #define USE_OLED_DISPLAY
 
 // • MIDI TYPE
@@ -40,10 +40,13 @@
 // Hardware Configuration - Multi-Teensy Standard Layout
 // ============================================================================
 
-// Menu Encoder Pin Assignments
-#define MENU_ENCODER_CLK 14
-#define MENU_ENCODER_DT 15  
-#define MENU_ENCODER_SW 16
+// Menu Encoder Pin Assignments (Filter Cutoff) - no push switch, rotate-only
+#define MENU_ENCODER_CLK 18
+#define MENU_ENCODER_DT 19
+
+// Preset Encoder Pin Assignments - rotating loads the preset immediately, no click needed
+#define PRESET_ENCODER_CLK 14
+#define PRESET_ENCODER_DT 15
 
 // ============================================================================
 // Encoder Pin Definitions (Mini-Teensy Standard Layout)
@@ -60,21 +63,21 @@
 #define ENC_5_CLK    6      // enc5 pins
 #define ENC_5_DT     7
 #define ENC_6_CLK    25     // enc6 pins
-#define ENC_6_DT     27
+#define ENC_6_DT     26
 #define ENC_7_CLK    12     // enc7 pins
 #define ENC_7_DT     24
 #define ENC_8_CLK    10     // enc8 pins
 #define ENC_8_DT     11
 #define ENC_9_CLK    29     // enc9 pins
 #define ENC_9_DT     30
-#define ENC_10_CLK   28     // enc10 pins
-#define ENC_10_DT    26
+#define ENC_10_CLK   27     // enc10 pins
+#define ENC_10_DT    28
 #define ENC_11_CLK   21     // enc11 pins
 #define ENC_11_DT    20
 //Encoder 12 is the menu encoder
 #define ENC_13_CLK   34     // enc13 pins
 #define ENC_13_DT    33
-#define ENC_14_CLK   50     // enc14 pins
+#define ENC_14_CLK   13     // enc14 pins
 #define ENC_14_DT    41
 #define ENC_15_CLK   23     // enc15 pins
 #define ENC_15_DT    22
@@ -83,7 +86,7 @@
 #define ENC_17_CLK   31     // enc17 pins
 #define ENC_17_DT    32
 #define ENC_18_CLK   17     // enc18 pins
-#define ENC_18_DT    51
+#define ENC_18_DT    16
 #define ENC_19_CLK   38     // enc19 pins
 #define ENC_19_DT    37
 #define ENC_20_CLK   40     // enc20 pins

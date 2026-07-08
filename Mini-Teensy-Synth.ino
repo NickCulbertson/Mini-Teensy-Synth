@@ -65,6 +65,7 @@ Encoder enc18(ENC_18_CLK, ENC_18_DT);
 Encoder enc19(ENC_19_CLK, ENC_19_DT);
 Encoder enc20(ENC_20_CLK, ENC_20_DT);
 Encoder menuEncoder(MENU_ENCODER_DT, MENU_ENCODER_CLK);
+Encoder presetEncoder(PRESET_ENCODER_CLK, PRESET_ENCODER_DT); // rotate-only, loads preset immediately
 
 // Configurable encoder to parameter mapping (defined in config.h)
 // Array indices: 0=enc1, 1=enc2, ..., 10=enc11, 11=menuEncoder, 12=enc13, 13=enc14, ..., 19=enc20
@@ -683,8 +684,6 @@ void setup() {
   // Initialize LFO
   lfo.frequency(lfoRate);
   lfo.amplitude(1.0);
-  
-  pinMode(MENU_ENCODER_SW, INPUT_PULLUP);
   
   // Initialize encoder values
   for (int i = 0; i < 20; i++) {
