@@ -478,6 +478,7 @@ void OnUSBHostPitchBend(byte channel, int bend) {
 
 
 void processMidiMessage(byte type, byte channel, byte data1, byte data2) {
+  Serial.printf("MIDI in: type=0x%02X ch=%d d1=%d d2=%d (midiChannel filter=%d)\n", type, channel, data1, data2, midiChannel);
   // Filter by MIDI channel (0 = omni, 1-16 = specific channel)
   if (midiChannel != 0 && channel != midiChannel) return;
   
@@ -846,7 +847,9 @@ void readAllControls() {
       
       int change = encoderValues[i] - lastEncoderValues[i];
       int paramIndex = encoderMapping[i]; // Use configurable mapping
-      
+      Serial.printf("Encoder slot %d moved: change=%d -> param %d (%s)\n", i, change,
+        paramIndex, (paramIndex >= 0 && paramIndex < NUM_PARAMETERS) ? controlNames[paramIndex] : "unmapped");
+
       // Only update if encoder is mapped to a valid parameter (not -1)
       if (paramIndex >= 0 && paramIndex < NUM_PARAMETERS) {
         // Handle macro mode for mapped parameters
@@ -928,15 +931,15 @@ void updateSynthParameter(int paramIndex, float val) {
       for (int v = 0; v < VOICES; v++) osc3[v].begin(osc3Wave);
       break;
     case 8: // Volume 1
-      vol1 = val * 0.8; // Increased gain from 0.4 to 0.8
+      vol1 = expGain(val, 0.8, -40.0); // Audio taper: even loudness feel across the turn
       for (int v = 0; v < VOICES; v++) oscMix[v].gain(0, vol1);
       break;
     case 9: // Volume 2
-      vol2 = val * 0.8; // Increased gain from 0.4 to 0.8
+      vol2 = expGain(val, 0.8, -40.0); // Audio taper: even loudness feel across the turn
       for (int v = 0; v < VOICES; v++) oscMix[v].gain(1, vol2);
       break;
     case 10: // Volume 3
-      vol3 = val * 0.8; // Increased gain from 0.4 to 0.8
+      vol3 = expGain(val, 0.8, -40.0); // Audio taper: even loudness feel across the turn
       for (int v = 0; v < VOICES; v++) oscMix[v].gain(2, vol3);
       break;
     case 11: // Cutoff
@@ -953,11 +956,11 @@ void updateSynthParameter(int paramIndex, float val) {
       }
       break;
     case 13: // Filter Attack
-      filtAttack = 1 + val * 3000;
+      filtAttack = expTime(val, 1, 3000); // Exponential: more turn dedicated to fast times
       updateEnvelopes();
       break;
     case 14: // Filter Decay/Release
-      filtDecay = 10 + val * 5000;
+      filtDecay = expTime(val, 10, 5000); // Exponential: more turn dedicated to fast times
       updateEnvelopes();
       break;
     case 15: // Filter Sustain
@@ -965,11 +968,11 @@ void updateSynthParameter(int paramIndex, float val) {
       updateEnvelopes();
       break;
     case 16: // Noise Volume (menu-only)
-      noiseVol = val * 0.6; // Increased gain from 0.3 to 0.6
+      noiseVol = expGain(val, 0.6, -40.0); // Audio taper: even loudness feel across the turn
       for (int v = 0; v < VOICES; v++) oscMix[v].gain(3, noiseVol);
       break;
     case 17: // Amp Attack (menu-only)
-      ampAttack = 1 + val * 3000;
+      ampAttack = expTime(val, 1, 3000); // Exponential: more turn dedicated to fast times
       updateEnvelopes();
       break;
     case 18: // Amp Sustain (menu-only)
@@ -977,7 +980,7 @@ void updateSynthParameter(int paramIndex, float val) {
       updateEnvelopes();
       break;
     case 19: // Amp Decay (menu-only)
-      ampDecay = 10 + val * 5000;
+      ampDecay = expTime(val, 10, 5000); // Exponential: more turn dedicated to fast times
       updateEnvelopes();
       break;
     case 20: { // Osc1 Fine Tune (menu-only) - Extended fine tuning: ±25 cents, then ±12 semitones
@@ -1045,6 +1048,19 @@ void updateSynthParameter(int paramIndex, float val) {
       midiChannel = (int)(val * 16.0); // 0-16 (0 = omni, 1-16 = channels)
       break;
   }
+}
+
+// Audio-taper gain curve: dB scales linearly with encoder position (val 0..1) so
+// loudness changes feel even across the whole turn, instead of loud-then-flat.
+float expGain(float val, float maxGain, float minDB) {
+  if (val <= 0.0) return 0.0;
+  return maxGain * pow(10.0, minDB * (1.0 - val) / 20.0);
+}
+
+// Exponential time curve: same idea as expGain, applied to envelope stage times
+// (ms) so short/fast times get more of the turn instead of being crammed at one end.
+float expTime(float val, float minMs, float maxMs) {
+  return minMs * pow(maxMs / minMs, val);
 }
 
 float getOscillatorRange(float val) {

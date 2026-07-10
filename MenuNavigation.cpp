@@ -287,6 +287,7 @@ void handleEncoder() {
 #endif
   static long oldMenuValue = 0;
   if (newMenuValue != oldMenuValue) {
+    Serial.printf("menuEncoder moved: %ld -> %ld\n", oldMenuValue, newMenuValue);
     // If menu encoder is set to -1 (menu-only mode), auto-enter menu on rotation
     if (!inMenu && MENU_ENCODER_PARAM == -1) {
       inMenu = true;
@@ -372,6 +373,7 @@ void handleEncoder() {
   long newPresetValue = presetEncoder.read() / 2;
   static long oldPresetValue = 0;
   if (newPresetValue != oldPresetValue) {
+    Serial.printf("presetEncoder moved: %ld -> %ld\n", oldPresetValue, newPresetValue);
     if (newPresetValue > oldPresetValue) {
       currentPreset++;
       if (currentPreset >= NUM_PRESETS) currentPreset = 0;
