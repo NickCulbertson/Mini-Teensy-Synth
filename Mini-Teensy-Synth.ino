@@ -809,27 +809,30 @@ void setup() {
 
 
 // Read all 20 Mini-Teensy encoders (excluding menu encoder - handled in MenuNavigation.cpp)
+// Divisor matches the cutoff encoder's "standard sensitivity" (menuEncoder / 2 in
+// MenuNavigation.cpp) - these were previously /4, requiring twice as many clicks
+// as cutoff to register the same parameter change.
 void readDirectEncoders() {
-  encoderValues[0] = enc1.read() / 4;   // enc1
-  encoderValues[1] = enc2.read() / 4;   // enc2
-  encoderValues[2] = enc3.read() / 4;   // enc3
-  encoderValues[3] = enc4.read() / 4;   // enc4
-  encoderValues[4] = enc5.read() / 4;   // enc5
-  encoderValues[5] = enc6.read() / 4;   // enc6
-  encoderValues[6] = enc7.read() / 4;   // enc7
-  encoderValues[7] = enc8.read() / 4;   // enc8
-  encoderValues[8] = enc9.read() / 4;   // enc9
-  encoderValues[9] = enc10.read() / 4;  // enc10
-  encoderValues[10] = enc11.read() / 4; // enc11
+  encoderValues[0] = enc1.read() / 2;   // enc1
+  encoderValues[1] = enc2.read() / 2;   // enc2
+  encoderValues[2] = enc3.read() / 2;   // enc3
+  encoderValues[3] = enc4.read() / 2;   // enc4
+  encoderValues[4] = enc5.read() / 2;   // enc5
+  encoderValues[5] = enc6.read() / 2;   // enc6
+  encoderValues[6] = enc7.read() / 2;   // enc7
+  encoderValues[7] = enc8.read() / 2;   // enc8
+  encoderValues[8] = enc9.read() / 2;   // enc9
+  encoderValues[9] = enc10.read() / 2;  // enc10
+  encoderValues[10] = enc11.read() / 2; // enc11
   // encoderValues[11] handled separately for cutoff (uses menuEncoder hardware) in MenuNavigation.cpp
-  encoderValues[12] = enc13.read() / 4; // enc13 (note: no enc12)
-  encoderValues[13] = enc14.read() / 4; // enc14
-  encoderValues[14] = enc15.read() / 4; // enc15
-  encoderValues[15] = enc16.read() / 4; // enc16
-  encoderValues[16] = enc17.read() / 4; // enc17
-  encoderValues[17] = enc18.read() / 4; // enc18
-  encoderValues[18] = enc19.read() / 4; // enc19
-  encoderValues[19] = enc20.read() / 4; // enc20
+  encoderValues[12] = enc13.read() / 2; // enc13 (note: no enc12)
+  encoderValues[13] = enc14.read() / 2; // enc14
+  encoderValues[14] = enc15.read() / 2; // enc15
+  encoderValues[15] = enc16.read() / 2; // enc16
+  encoderValues[16] = enc17.read() / 2; // enc17
+  encoderValues[17] = enc18.read() / 2; // enc18
+  encoderValues[18] = enc19.read() / 2; // enc19
+  encoderValues[19] = enc20.read() / 2; // enc20
 }
 
 

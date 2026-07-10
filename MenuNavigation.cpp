@@ -849,27 +849,29 @@ void resetEncoderBaselines() {
     // Only reset encoders that are mapped to valid parameters
     if (paramIndex != -1 && paramIndex >= 0 && paramIndex < NUM_PARAMETERS) {
       long targetEncoderValue = (long)(allParameterValues[paramIndex] * 100);
+      // Multiplier must match the /2 read divisor in readDirectEncoders() so the
+      // write/read round-trip doesn't produce a phantom jump on the next read.
       switch(i) {
-        case 0: enc1.write(targetEncoderValue * 4); break;
-        case 1: enc2.write(targetEncoderValue * 4); break;
-        case 2: enc3.write(targetEncoderValue * 4); break;
-        case 3: enc4.write(targetEncoderValue * 4); break;
-        case 4: enc5.write(targetEncoderValue * 4); break;
-        case 5: enc6.write(targetEncoderValue * 4); break;
-        case 6: enc7.write(targetEncoderValue * 4); break;
-        case 7: enc8.write(targetEncoderValue * 4); break;
-        case 8: enc9.write(targetEncoderValue * 4); break;
-        case 9: enc10.write(targetEncoderValue * 4); break;
-        case 10: enc11.write(targetEncoderValue * 4); break;
+        case 0: enc1.write(targetEncoderValue * 2); break;
+        case 1: enc2.write(targetEncoderValue * 2); break;
+        case 2: enc3.write(targetEncoderValue * 2); break;
+        case 3: enc4.write(targetEncoderValue * 2); break;
+        case 4: enc5.write(targetEncoderValue * 2); break;
+        case 5: enc6.write(targetEncoderValue * 2); break;
+        case 6: enc7.write(targetEncoderValue * 2); break;
+        case 7: enc8.write(targetEncoderValue * 2); break;
+        case 8: enc9.write(targetEncoderValue * 2); break;
+        case 9: enc10.write(targetEncoderValue * 2); break;
+        case 10: enc11.write(targetEncoderValue * 2); break;
         case 11: /* menuEncoder handled by MenuNavigation.cpp */ break;
-        case 12: enc13.write(targetEncoderValue * 4); break;
-        case 13: enc14.write(targetEncoderValue * 4); break;
-        case 14: enc15.write(targetEncoderValue * 4); break;
-        case 15: enc16.write(targetEncoderValue * 4); break;
-        case 16: enc17.write(targetEncoderValue * 4); break;
-        case 17: enc18.write(targetEncoderValue * 4); break;
-        case 18: enc19.write(targetEncoderValue * 4); break;
-        case 19: enc20.write(targetEncoderValue * 4); break;
+        case 12: enc13.write(targetEncoderValue * 2); break;
+        case 13: enc14.write(targetEncoderValue * 2); break;
+        case 14: enc15.write(targetEncoderValue * 2); break;
+        case 15: enc16.write(targetEncoderValue * 2); break;
+        case 16: enc17.write(targetEncoderValue * 2); break;
+        case 17: enc18.write(targetEncoderValue * 2); break;
+        case 18: enc19.write(targetEncoderValue * 2); break;
+        case 19: enc20.write(targetEncoderValue * 2); break;
       }
       encoderValues[i] = targetEncoderValue;
       lastEncoderValues[i] = targetEncoderValue;
