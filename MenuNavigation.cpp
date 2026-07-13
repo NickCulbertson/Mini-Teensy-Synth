@@ -763,8 +763,11 @@ void updateEncoderParameter(int paramIndex, int change) {
     case 8: case 9: case 10: // Volume controls - 128 steps (enc9, enc10, enc11 /4)
       increment = 1.0/128.0; // = 0.0078125 - exact 128-step resolution
       break;
-    case 11: // Filter cutoff - consistent 128-step feel (menuEncoder /2)
-      increment = 1.0/128.0; // = 0.0078125 - consistent with all other controls
+    case 11: // Filter cutoff - full sweep in 270 degrees of physical rotation.
+      // menuEncoder is a 20-detent KY-040; read()/2 gives 2 encoderValues units
+      // per detent, so 15 detents (15/20 turn = 270 degrees) x 2 units/detent = 30
+      // units for the full 0..1 range.
+      increment = 1.0/30.0;
       break;
     case 12: // Filter resonance - optimized for 128 steps (enc13 /4) 
       increment = 1.0/128.0; // = 0.0078125 - exact 128-step resolution
